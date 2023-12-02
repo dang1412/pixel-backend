@@ -1,0 +1,15 @@
+// Define a table for BeastAction which includes an id and a target.
+struct BeastAction {
+    id:int;
+    target:int;
+}
+
+// The main UpdateState table.
+table UpdateState {
+    beast_moves:[BeastAction]; // A vector of BeastAction for beastMoves.
+    beast_shoots:[BeastAction]; // A vector of BeastAction for beastShoots.
+    beast_deaths:[int]; // A vector of ints for beastDeaths.
+}
+
+// Define the root type.
+root_type UpdateState;

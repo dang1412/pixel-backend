@@ -1,0 +1,30 @@
+{
+  "name": "nakama",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "rollup -c",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.23.3",
+    "@babel/plugin-external-helpers": "^7.23.3",
+    "@babel/preset-env": "^7.23.3",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-json": "^6.0.1",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "rollup": "^4.5.1",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "flatbuffers": "^23.5.26",
+    "nakama-runtime": "github:heroiclabs/nakama-common"
+  }
+}
