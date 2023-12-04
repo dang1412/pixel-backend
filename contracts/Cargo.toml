@@ -1,0 +1,13 @@
+[workspace]
+members = [
+	"pixel",
+	"pixel_adventure",
+	"pixel_lottery",
+	"common_traits",
+]
+resolver = "2"
+
+[workspace.package]
+authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2021"
+repository = "https://github.com/dang1412/pixel-ink/"
