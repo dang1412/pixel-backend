@@ -54,15 +54,15 @@ mod pixel_adventure {
     }
 
     #[ink(event)]
-    pub struct CharacterMove {
+    pub struct BeastMove {
         beast_id: u32,
-        to: u16,
+        pixel_id: u16,
     }
 
     #[ink(event)]
-    pub struct CharacterShoot {
+    pub struct BeastJoinMatch {
+        match_id: u16,
         beast_id: u32,
-        to: u16,
     }
 
     #[ink(event)]
@@ -73,16 +73,12 @@ mod pixel_adventure {
     // adventure logic
     impl AdventureTrait for PixelAdventure {}
     impl AdventureInternal for PixelAdventure {
-        fn _emit_beast_move(&self, beast_id: u32, to: u16) {
-            self.env().emit_event( CharacterMove { beast_id, to });
+        fn _emit_beast_move(&self, beast_id: u32, pixel_id: u16) {
+            self.env().emit_event( BeastMove { beast_id, pixel_id });
         }
 
-        fn _emit_beast_shoot(&self, beast_id: u32, to: u16) {
-            self.env().emit_event( CharacterShoot { beast_id, to });
-        }
-
-        fn _emit_beast_kill(&self, beast_id: u32) {
-            self.env().emit_event( CharacterKill { beast_id });
+        fn _emit_beast_join_match(&self, match_id: u16, beast_id: u32) {
+            self.env().emit_event( BeastJoinMatch { match_id, beast_id });
         }
     }
 
@@ -114,15 +110,15 @@ mod pixel_adventure {
 
         let mut adventure = PixelAdventure::new();
 
-        assert_eq!(adventure.mint("Dang".into(), "0".into()), Ok(0));
-        assert_eq!(adventure.mint("Razor".into(), "2".into()), Ok(1));
-        assert_eq!(adventure.onboard(0, 4550), Ok(()));
-        assert_eq!(adventure.onboard(1, 4560), Ok(()));
+        assert_eq!(adventure.mint_beast("Dang".into(), "0".into()), Ok(0));
+        assert_eq!(adventure.mint_beast("Razor".into(), "2".into()), Ok(1));
+        assert_eq!(adventure.join_match(0, 0), Ok(()));
+        assert_eq!(adventure.join_match(0, 1), Ok(()));
 
-        assert_eq!(adventure.adventure_data.max_id, 2);
+        assert_eq!(adventure.adventure_data.current_id, 2);
 
-        let rs = adventure.get_beast_onboard();
+        let rs = adventure.get_beast_onmatch(0);
 
-        assert_eq!(rs, vec![(0, 4550), (1, 4560)]);
+        assert_eq!(rs, vec![0, 1]);
     }
 }

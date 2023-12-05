@@ -1,15 +1,6 @@
-use ink::prelude::{
-    string::String,
-    vec::Vec,
-};
+use ink::prelude::string::String;
 
-use openbrush::{
-    traits::{
-        AccountId,
-        Balance,
-    },
-    contracts::psp34::PSP34Error,
-};
+use crate::adventure::types::AdventureError;
 
 #[openbrush::wrapper]
 pub type AdventureRef = dyn AdventureTraitRef;
@@ -19,5 +10,5 @@ pub type AdventureRef = dyn AdventureTraitRef;
 #[openbrush::trait_definition]
 pub trait AdventureTraitRef {
     #[ink(message, payable)]
-    fn pick(&mut self, pixel_ids: Vec<(u16, u128)>);
+    fn mint(&mut self, name: String, beast_type: String) -> Result<u32, AdventureError>;
 }

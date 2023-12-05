@@ -1,7 +1,7 @@
+use openbrush::contracts::psp34::Id;
 use openbrush::traits::{
-    // AccountId,
-    // Balance,
-    // BlockNumber,
+    AccountId,
+    Balance,
     String,
 };
 
@@ -10,20 +10,15 @@ use openbrush::storage::{
     MultiMapping,
 };
 
-use ink::storage::traits::StorageLayout;
-
 #[derive(Default, Debug)]
 #[openbrush::storage_item]
 pub struct AdventureConfig {
-    // /// Price per entry.
-    // price: Balance,
-    // /// Starting block of the lottery.
-    // start: BlockNumber,
-    // /// Length of the lottery (start + length = end).
-    // length: BlockNumber,
-    // /// Delay for choosing the winner of the lottery. (start + length + delay = payout).
-    // /// Randomness in the "payout" block will be used to determine the winner.
-    // delay: BlockNumber,
+    /// Price to mint a new beast
+    mint_beast_price: Balance,
+    /// Beast has this number of free lives a day, pay to play more
+    beast_day_lives: u8,
+    /// Pixel contract addr, for cross-contract call
+    pixel_addr: Option<AccountId>,
 }
 
 #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -38,16 +33,22 @@ pub struct BeastAttributes {
 #[derive(Default, Debug)]
 #[openbrush::storage_item]
 pub struct AdventureData {
-    pub position_beast: Mapping<u16, u32>,
+    /// Config
+    pub config: AdventureConfig,
+    /// 1 pixel contains multiple beasts
+    pub position_beast: MultiMapping<u16, u32>,
+    /// 1 beast is located at 1 pixel
+    /// beast will join match to move to other location
     pub beast_position: Mapping<u32, u16>,
 
-    // pub beast_index: Mapping<u16, u16>,
-    // pub alives: Mapping<u16, u16>,
-    // pub length: u16,
+    /// each new beast mint will use this current id, then increase it
+    pub current_id: u32,
 
-    pub max_id: u32,
+    /// match_id => all beasts on the match
+    pub beast_onmatch: MultiMapping<u16, u32>,
 
-    pub beast_onboard: MultiMapping<u16, u32>,
+    /// equipments
+    pub beast_equipments: MultiMapping<u32, Id>,
 }
 
 /// The Adventure error type. Contract will throw one of this errors.
