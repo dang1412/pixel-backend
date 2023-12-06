@@ -1,7 +1,7 @@
-use openbrush::traits::{
+use openbrush::{traits::{
     Balance,
     String,
-};
+}, storage::MultiMapping};
 
 use ink::{
     storage::{ Mapping, traits::StorageLayout },
@@ -28,17 +28,21 @@ pub struct PixelData {
     pub max_owned_amount: u16,
     pub price_per_mint: Balance,
 
-    // images
+    /// images
     pub images: Mapping<u16, PixelImage>,
+    /// map a pixel to the top-left pixel (if image on it)
+    pub pixel_image_topleft: Mapping<u16, u16>,
     pub meaningful_pixel_ids: BTreeSet<u16>,
 
-    // sub-images
+    /// sub-images
     pub sub_images: Mapping<(u16, u8), PixelImage>,
-    pub pixel_sub_image_ids: Mapping<u16, u128>,    // map from a pixel_id to a list of sub_pixel_ids (represented by u128) which has sub_image on it.
+    /// map from a pixel_id to a list of sub_pixel_ids (represented by u128) which has sub_image on it.
+    pub pixel_sub_image_ids: Mapping<u16, u128>,
 
-    // market
+    /// market
     pub prices: Mapping<u16, Balance>,
-    pub onsale_pixel_ids: BTreeSet<u16>,
+    // pub onsale_pixel_ids: BTreeSet<u16>,
+    pub onsale_pixel_ids: MultiMapping<(), u16>,
 }
 
 #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]

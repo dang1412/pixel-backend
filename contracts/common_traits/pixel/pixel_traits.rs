@@ -75,4 +75,7 @@ pub trait PixelTraitRef {
     /// Get max number of tokens which could be minted per call
     #[ink(message)]
     fn get_max_mint_amount(&mut self) -> u8;
+
+    #[ink(message)]
+    fn get_image_on_pixel(&self, pixel_id: u16) -> Option<PixelImage>;
 }

@@ -198,6 +198,13 @@ pub trait PixelTrait:
     fn get_max_mint_amount(&mut self) -> u8 {
         self.data::<PixelData>().max_mint_amount
     }
+
+    #[ink(message)]
+    fn get_image_on_pixel(&self, pixel_id: u16) -> Option<PixelImage> {
+        let top_pixel_id = self.data::<PixelData>().pixel_image_topleft.get(pixel_id).unwrap_or(pixel_id);
+
+        self.data::<PixelData>().images.get(top_pixel_id)
+    }
 }
 
 /// Helper trait for PayableMint
@@ -256,8 +263,9 @@ pub trait Internal: Storage<PixelData> + psp34::Internal {
 
         // TODO burn pixels covered by this image except top-left corner pixel
 
-        // remove from meaningful pixels
+        // set the topleft map, remove from meaningful pixels
         for pixel_id in pixel_ids.iter().skip(1) {
+            self.data::<PixelData>().pixel_image_topleft.insert(pixel_id, &image.pixel_id);
             self.data::<PixelData>().meaningful_pixel_ids.remove(pixel_id);
         }
 
