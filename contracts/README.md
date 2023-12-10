@@ -1,6 +1,6 @@
 # Pixel Contracts
 
-The contracts struture following this guide []() with 3 crates for 3 contracts
+The contracts struture following this guide [Multiple contracts project](https://github.com/dang1412/ink-samples/tree/main/multiple_contracts_project) with 3 crates for 3 contracts
 
 - Pixel contract
 - Lottery game contract
@@ -51,3 +51,7 @@ Admin (controlled by game server)
 - Utils: helper functions calculating logic regarding pixel
   - Transalate back and forth between pixel id and coordination (x, y)
   - Encode/Decode set of subpixels (100) inside a pixel into/from u128
+
+## Build
+
+Build and deploy contract upgrade on-chain using shell script.
