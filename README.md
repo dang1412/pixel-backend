@@ -35,3 +35,4 @@ We are focusing on and developing the **adventure game** with criteria (and the 
 
 We are considering leveraging the [RMRK](https://github.com/rmrk-team/rmrk-ink) standard for NFTs combination, but for now, using very simple equipment implementation.
 
+## Adventure Game
