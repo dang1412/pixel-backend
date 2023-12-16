@@ -5,7 +5,7 @@
     "noImplicitReturns": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "noUnusedLocals": true,
+    "noUnusedLocals": false,
     "removeComments": true,
     "target": "es5",
     "module": "ESNext",
