@@ -41,3 +41,26 @@ export interface AdventureUpdate {
   changedBeasts: number[]
   changedBeastAttrs: BeastAttrs[]
 }
+
+export interface AdventureState {
+  // beast_id => attributes
+  beastAttrsMap: { [id: number]: BeastAttrs } // number, BeastAttrs>
+  // beast_id => pixel map
+  beastPixelMap: { [id: number]: number } // Map<number, number>
+  // pixel => beast_id map
+  pixelBeastMap: { [id: number]: number } // Map<number, number>
+  // beasts alive on map
+  beastOnMap: number[]
+
+  // weapon id => attributes
+  weaponAttrsMap: { [id: number]: WeaponAttrs } // Map<number, WeaponAttrs>
+
+  // pixel => array of (item, quantity)
+  pixelItemsMap: { [pixel: number]: [number, number][] }// Map<number, [number, number][]>
+
+  // pixel => vehicle
+  pixelVehicleMap: { [pixel: number]: number } // Map<number, number>
+
+  // beast_id => array of equipped weapons (weapon id, quantity)
+  beastEquipmentsMap: { [id: number]: [number, number][] } // Map<number, [number, number][]>
+}

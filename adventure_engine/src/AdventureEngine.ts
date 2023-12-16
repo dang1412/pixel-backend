@@ -1,48 +1,74 @@
-import { ActionInfo, AdventureUpdate, BeastAttrs, WeaponAttrs } from './types'
+import { ActionInfo, AdventureState, AdventureUpdate, BeastAttrs, WeaponAttrs } from './types'
 import { getPixelIndexesFromArea, getPixelXYFromIndex } from './utils'
 
 export class AdventureEngine {
-  // beast_id => attributes
-  beastAttrsMap = new Map<number, BeastAttrs>()
-  // beast_id => pixel map
-  beastPixelMap = new Map<number, number>()
-  // pixel => beast_id map
-  pixelBeastMap = new Map<number, number>()
-  // beasts alive on map
-  beastOnMap: number[]
+  // // beast_id => attributes
+  // beastAttrsMap = new Map<number, BeastAttrs>()
+  // // beast_id => pixel map
+  // beastPixelMap = new Map<number, number>()
+  // // pixel => beast_id map
+  // pixelBeastMap = new Map<number, number>()
+  // // beasts alive on map
+  // beastOnMap: number[]
 
-  // weapon id => attributes
-  weaponAttrsMap = new Map<number, WeaponAttrs>()
+  // // weapon id => attributes
+  // weaponAttrsMap = new Map<number, WeaponAttrs>()
 
-  // pixel => array of (item, quantity)
-  pixelItemsMap = new Map<number, [number, number][]>()
+  // // pixel => array of (item, quantity)
+  // pixelItemsMap = new Map<number, [number, number][]>()
 
-  // pixel => vehicle
-  pixelVehicleMap = new Map<number, number>()
+  // // pixel => vehicle
+  // pixelVehicleMap = new Map<number, number>()
 
-  // beast_id => array of equipped weapons (weapon id, quantity)
-  beastEquipmentsMap = new Map<number, [number, number][]>()
+  // // beast_id => array of equipped weapons (weapon id, quantity)
+  // beastEquipmentsMap = new Map<number, [number, number][]>()
 
-  constructor() {
+  static initState(): AdventureState {
     // TODO load weapons data on-chain
-    this.weaponAttrsMap.set(1, { damage: 1, damageArea: {x: -1, y: -1, w: 3, h: 3} })
+    // this.weaponAttrsMap.set(1, { damage: 1, damageArea: {x: -1, y: -1, w: 3, h: 3} })
+    const state: AdventureState = {
+      // beast_id => attributes
+      beastAttrsMap: {},
+      // beast_id => pixel map
+      beastPixelMap: {},
+      // pixel => beast_id map
+      pixelBeastMap: {},
+      // beasts alive on map
+      beastOnMap: [],
+
+      // weapon id => attributes
+      weaponAttrsMap: {},
+
+      // pixel => array of (item, quantity)
+      pixelItemsMap: {},
+
+      // pixel => vehicle
+      pixelVehicleMap: {},
+
+      // beast_id => array of equipped weapons (weapon id, quantity)
+      beastEquipmentsMap: {}
+    }
+
+    state.weaponAttrsMap[1] = { damage: 1, damageArea: {x: -1, y: -1, w: 3, h: 3} }
+
+    return state
   }
 
-  getAllBeastPositions(): ActionInfo[] {
-    // const positions: ActionInfo[] = Object.keys(this.beastPixelMap).map(id => Number(id)).map(id => ({beastId: id, pixel: this.beastPixelMap.get(id)}))
-    const positions: ActionInfo[] = Array.from(this.beastPixelMap.entries()).map(entry => ({beastId: entry[0], pixel: entry[1]}))
+  static getAllBeastPositions(state: AdventureState): ActionInfo[] {
+    const positions: ActionInfo[] = Object.keys(state.beastPixelMap).map(id => Number(id)).map(id => ({beastId: id, pixel: state.beastPixelMap[id]}))
+    // const positions: ActionInfo[] = Array.from(state.beastPixelMap.entries()).map(entry => ({beastId: entry[0], pixel: entry[1]}))
 
     return positions
   }
 
-  onboardBeast(beastId: number, pixel: number, equipments: [number, number][], attrs?: BeastAttrs) {
+  static onboardBeast(state: AdventureState, beastId: number, pixel: number, equipments: [number, number][], attrs?: BeastAttrs) {
     // TODO load beast location, equipments, attributes on-chain
-    this.executeMove({beastId, pixel})
-    this.beastEquipmentsMap.set(beastId, equipments)
-    this.beastAttrsMap.set(beastId, attrs)
+    AdventureEngine.executeMove(state, {beastId, pixel})
+    state.beastEquipmentsMap[beastId] = equipments
+    state.beastAttrsMap[beastId] = attrs
   }
 
-  proceedActions(moves: ActionInfo[], shoots: ActionInfo[]): AdventureUpdate {
+  static proceedActions(state: AdventureState, moves: ActionInfo[], shoots: ActionInfo[]): AdventureUpdate {
     const updates: AdventureUpdate = {
       moves: [],
       shoots: [],
@@ -52,17 +78,17 @@ export class AdventureEngine {
 
     for (let move of moves) {
       const { beastId, pixel } = move
-      const attr = this.beastAttrsMap.get(beastId)
+      const attr = state.beastAttrsMap[beastId]
 
       // check if beastId is alive
-      const curpos = this.beastPixelMap.get(beastId)
+      const curpos = state.beastPixelMap[beastId]
       if (curpos >= 0) {
 
         // TODO check move is valid (in range)
         
         // check move target is empty
-        if (this.pixelBeastMap.get(pixel) === undefined) {
-          this.executeMove(move)
+        if (state.pixelBeastMap[pixel] === undefined) {
+          AdventureEngine.executeMove(state, move)
           updates.moves.push(move)
         }
       }
@@ -74,16 +100,16 @@ export class AdventureEngine {
     for (let shoot of shoots) {
       const { beastId, pixel } = shoot
       // check if beastId is alive
-      const curpos = this.beastPixelMap.get(beastId)
+      const curpos = state.beastPixelMap[beastId]
       if (curpos >= 0) {
         // TODO check shoot range
-        this.executeShoot(shoot, changedBeastSet)
+        AdventureEngine.executeShoot(state, shoot, changedBeastSet)
         updates.shoots.push(shoot)
       }
     }
 
     updates.changedBeasts = Array.from(changedBeastSet)
-    updates.changedBeastAttrs = updates.changedBeasts.map(beastId => this.beastAttrsMap.get(beastId))
+    updates.changedBeastAttrs = updates.changedBeasts.map(beastId => state.beastAttrsMap[beastId])
 
     return updates
   }
@@ -92,46 +118,46 @@ export class AdventureEngine {
   //   const attrs = updateAttrs.get(beastId)
   // }
 
-  private executeMove(move: ActionInfo) {
+  static executeMove(state: AdventureState, move: ActionInfo) {
     const { beastId, pixel } = move
-    const from = this.beastPixelMap.get(beastId)
+    const from = state.beastPixelMap[beastId]
   
-    this.beastPixelMap.set(beastId, pixel)
-    this.pixelBeastMap.set(pixel, beastId)
+    state.beastPixelMap[beastId] = pixel
+    state.pixelBeastMap[pixel] = beastId
   
-    this.pixelBeastMap.delete(from)
+    delete state.pixelBeastMap[from]
   }
 
-  private executeShoot(shoot: ActionInfo, changedBeasts: Set<number>) {
+  static executeShoot(state: AdventureState, shoot: ActionInfo, changedBeasts: Set<number>) {
     const { beastId, pixel, type } = shoot
 
     // TODO check if beast equips this weapon
 
     // get the weapon attributes or default
-    const { damage, damageArea } = this.weaponAttrsMap.get(type) || { damage: 1, damageArea: {x: 0, y: 0, w: 1, h: 1} }
+    const { damage, damageArea } = state.weaponAttrsMap[type] || { damage: 1, damageArea: {x: 0, y: 0, w: 1, h: 1} }
     const [tarx, tary] = getPixelXYFromIndex(pixel, 100)
     const [x, y, w, h] = [tarx + damageArea.x, tary + damageArea.y, damageArea.w, damageArea.h]
 
     const damagedPixels = getPixelIndexesFromArea({x, y, w, h}, 100)
 
     for (let target of damagedPixels) {
-      const update = this.receiveDamage(target, damage)
+      const update = AdventureEngine.receiveDamage(state, target, damage)
       if (update) {
         const [beastId, attrs] = update
-        this.beastAttrsMap.set(beastId, attrs)
+        state.beastAttrsMap[beastId] = attrs
         changedBeasts.add(beastId)
       }
     }
   }
 
-  private receiveDamage(pixel: number, damage: number): [number, BeastAttrs] | undefined {
-    const beastId = this.pixelBeastMap.get(pixel)
+  static receiveDamage(state: AdventureState, pixel: number, damage: number): [number, BeastAttrs] | undefined {
+    const beastId = state.pixelBeastMap[pixel]
     if (beastId === undefined) {
       // no beast on the target pixel
       return undefined
     }
 
-    const attrs = this.beastAttrsMap.get(beastId)
+    const attrs = state.beastAttrsMap[beastId]
     if (attrs === undefined) {
       // no beast attrs
       return undefined
@@ -146,17 +172,17 @@ export class AdventureEngine {
     const health = Math.max(attrs.health - damage, 0)
 
     if (health === 0) {
-      this.beastDie(beastId)
+      AdventureEngine.beastDie(state, beastId)
     }
 
     return [beastId, { health }]
   }
 
-  private beastDie(beastId: number) {
-    const pos = this.beastPixelMap.get(beastId)
-    this.pixelBeastMap.delete(pos)
-    this.beastPixelMap.delete(beastId)
-    this.beastAttrsMap.delete(beastId)
+  static beastDie(state: AdventureState, beastId: number) {
+    const pos = state.beastPixelMap[beastId]
+    delete state.pixelBeastMap[pos]
+    delete state.beastPixelMap[beastId]
+    delete state.beastAttrsMap[beastId]
     // delete state.positionBeast[target]
     // delete state.beastPosition[die]
   }
