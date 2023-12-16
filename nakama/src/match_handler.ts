@@ -1,13 +1,13 @@
 // import { TextEncoder, TextDecoder } from './encode.js'
 // import * as flatbuffers from 'flatbuffers'
-import { ActionInfo, AdventureEngine } from 'adventure_engine'
+import { ActionInfo, AdventureEngine, AdventureState } from 'adventure_engine'
 
 import { TextEncoder, TextDecoder, encodeMatchUpdate } from './encode'
 // import { UpdateState, BeastAction } from './flatbuffer/match-update'
 
 interface MatchState {
   presences: {[userId: string]: nkruntime.Presence}
-  adventure: AdventureEngine
+  adventure: AdventureState
 }
 
 
@@ -17,10 +17,10 @@ export function matchInit(
   nk: nkruntime.Nakama,
   params: {[key: string]: string},
 ): {state: MatchState, tickRate: number, label: string} {
-  logger.debug('Lobby match created')
+  logger.debug('Adventure match created')
 
   const presences: {[userId: string]: nkruntime.Presence} = {}
-  const adventure = new AdventureEngine()
+  const adventure = AdventureEngine.initState()
 
   return {
       state: { presences, adventure },
@@ -61,7 +61,7 @@ export function matchJoin(
     logger.info('%q joined Adventure match', presence.userId)
   })
   // const positions: BeastActionI[] = Object.keys(state.beastPosition).map(id => Number(id)).map(id => ({id, target: state.beastPosition[id]}))
-  const positions = state.adventure.getAllBeastPositions()
+  const positions = AdventureEngine.getAllBeastPositions(state.adventure)
 
   const data = encodeMatchUpdate({moves: positions, shoots: [], changedBeasts: [], changedBeastAttrs: []})
 
@@ -223,7 +223,7 @@ export function matchLoop(
   tick: number,
   state: MatchState,
   messages: nkruntime.MatchMessage[]
-) : { state: MatchState} | null {
+) : { state: MatchState } | null {
   // logger.debug('Lobby match loop executed')
 
   // Object.keys(state.presences).forEach((key) => {
@@ -252,7 +252,7 @@ export function matchLoop(
 
   // update match states and get changes
   // const { executedMoves, executedShoots, beastGone } = matchUpdate(state, moves, shoots)
-  const updates = state.adventure.proceedActions(moves, shoots)
+  const updates = AdventureEngine.proceedActions(state.adventure, moves, shoots)
 
   if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length) {
     const data = encodeMatchUpdate(updates)

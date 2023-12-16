@@ -19,15 +19,19 @@ function getPixelIndexesFromArea(area, mapWidth) {
 }
 
 var AdventureEngine = function () {
-  function AdventureEngine() {
-    this.beastAttrsMap = new Map();
-    this.beastPixelMap = new Map();
-    this.pixelBeastMap = new Map();
-    this.weaponAttrsMap = new Map();
-    this.pixelItemsMap = new Map();
-    this.pixelVehicleMap = new Map();
-    this.beastEquipmentsMap = new Map();
-    this.weaponAttrsMap.set(1, {
+  function AdventureEngine() {}
+  AdventureEngine.initState = function () {
+    var state = {
+      beastAttrsMap: {},
+      beastPixelMap: {},
+      pixelBeastMap: {},
+      beastOnMap: [],
+      weaponAttrsMap: {},
+      pixelItemsMap: {},
+      pixelVehicleMap: {},
+      beastEquipmentsMap: {}
+    };
+    state.weaponAttrsMap[1] = {
       damage: 1,
       damageArea: {
         x: -1,
@@ -35,27 +39,29 @@ var AdventureEngine = function () {
         w: 3,
         h: 3
       }
-    });
-  }
-  AdventureEngine.prototype.getAllBeastPositions = function () {
-    var positions = Array.from(this.beastPixelMap.entries()).map(function (entry) {
+    };
+    return state;
+  };
+  AdventureEngine.getAllBeastPositions = function (state) {
+    var positions = Object.keys(state.beastPixelMap).map(function (id) {
+      return Number(id);
+    }).map(function (id) {
       return {
-        beastId: entry[0],
-        pixel: entry[1]
+        beastId: id,
+        pixel: state.beastPixelMap[id]
       };
     });
     return positions;
   };
-  AdventureEngine.prototype.onboardBeast = function (beastId, pixel, equipments, attrs) {
-    this.executeMove({
+  AdventureEngine.onboardBeast = function (state, beastId, pixel, equipments, attrs) {
+    AdventureEngine.executeMove(state, {
       beastId: beastId,
       pixel: pixel
     });
-    this.beastEquipmentsMap.set(beastId, equipments);
-    this.beastAttrsMap.set(beastId, attrs);
+    state.beastEquipmentsMap[beastId] = equipments;
+    state.beastAttrsMap[beastId] = attrs;
   };
-  AdventureEngine.prototype.proceedActions = function (moves, shoots) {
-    var _this = this;
+  AdventureEngine.proceedActions = function (state, moves, shoots) {
     var updates = {
       moves: [],
       shoots: [],
@@ -66,11 +72,11 @@ var AdventureEngine = function () {
       var move = moves_1[_i];
       var beastId = move.beastId,
         pixel = move.pixel;
-      this.beastAttrsMap.get(beastId);
-      var curpos = this.beastPixelMap.get(beastId);
+      state.beastAttrsMap[beastId];
+      var curpos = state.beastPixelMap[beastId];
       if (curpos >= 0) {
-        if (this.pixelBeastMap.get(pixel) === undefined) {
-          this.executeMove(move);
+        if (state.pixelBeastMap[pixel] === undefined) {
+          AdventureEngine.executeMove(state, move);
           updates.moves.push(move);
         }
       }
@@ -80,31 +86,31 @@ var AdventureEngine = function () {
       var shoot = shoots_1[_a];
       var beastId = shoot.beastId,
         pixel = shoot.pixel;
-      var curpos = this.beastPixelMap.get(beastId);
+      var curpos = state.beastPixelMap[beastId];
       if (curpos >= 0) {
-        this.executeShoot(shoot, changedBeastSet);
+        AdventureEngine.executeShoot(state, shoot, changedBeastSet);
         updates.shoots.push(shoot);
       }
     }
     updates.changedBeasts = Array.from(changedBeastSet);
     updates.changedBeastAttrs = updates.changedBeasts.map(function (beastId) {
-      return _this.beastAttrsMap.get(beastId);
+      return state.beastAttrsMap[beastId];
     });
     return updates;
   };
-  AdventureEngine.prototype.executeMove = function (move) {
+  AdventureEngine.executeMove = function (state, move) {
     var beastId = move.beastId,
       pixel = move.pixel;
-    var from = this.beastPixelMap.get(beastId);
-    this.beastPixelMap.set(beastId, pixel);
-    this.pixelBeastMap.set(pixel, beastId);
-    this.pixelBeastMap["delete"](from);
+    var from = state.beastPixelMap[beastId];
+    state.beastPixelMap[beastId] = pixel;
+    state.pixelBeastMap[pixel] = beastId;
+    delete state.pixelBeastMap[from];
   };
-  AdventureEngine.prototype.executeShoot = function (shoot, changedBeasts) {
+  AdventureEngine.executeShoot = function (state, shoot, changedBeasts) {
     shoot.beastId;
       var pixel = shoot.pixel,
       type = shoot.type;
-    var _a = this.weaponAttrsMap.get(type) || {
+    var _a = state.weaponAttrsMap[type] || {
         damage: 1,
         damageArea: {
           x: 0,
@@ -131,21 +137,21 @@ var AdventureEngine = function () {
     }, 100);
     for (var _i = 0, damagedPixels_1 = damagedPixels; _i < damagedPixels_1.length; _i++) {
       var target = damagedPixels_1[_i];
-      var update = this.receiveDamage(target, damage);
+      var update = AdventureEngine.receiveDamage(state, target, damage);
       if (update) {
         var beastId_1 = update[0],
           attrs = update[1];
-        this.beastAttrsMap.set(beastId_1, attrs);
+        state.beastAttrsMap[beastId_1] = attrs;
         changedBeasts.add(beastId_1);
       }
     }
   };
-  AdventureEngine.prototype.receiveDamage = function (pixel, damage) {
-    var beastId = this.pixelBeastMap.get(pixel);
+  AdventureEngine.receiveDamage = function (state, pixel, damage) {
+    var beastId = state.pixelBeastMap[pixel];
     if (beastId === undefined) {
       return undefined;
     }
-    var attrs = this.beastAttrsMap.get(beastId);
+    var attrs = state.beastAttrsMap[beastId];
     if (attrs === undefined) {
       return undefined;
     }
@@ -154,17 +160,17 @@ var AdventureEngine = function () {
     }
     var health = Math.max(attrs.health - damage, 0);
     if (health === 0) {
-      this.beastDie(beastId);
+      AdventureEngine.beastDie(state, beastId);
     }
     return [beastId, {
       health: health
     }];
   };
-  AdventureEngine.prototype.beastDie = function (beastId) {
-    var pos = this.beastPixelMap.get(beastId);
-    this.pixelBeastMap["delete"](pos);
-    this.beastPixelMap["delete"](beastId);
-    this.beastAttrsMap["delete"](beastId);
+  AdventureEngine.beastDie = function (state, beastId) {
+    var pos = state.beastPixelMap[beastId];
+    delete state.pixelBeastMap[pos];
+    delete state.beastPixelMap[beastId];
+    delete state.beastAttrsMap[beastId];
   };
   return AdventureEngine;
 }();
@@ -1362,9 +1368,9 @@ function encodeMatchUpdate(updates) {
 }
 
 function matchInit(ctx, logger, nk, params) {
-  logger.debug('Lobby match created');
+  logger.debug('Adventure match created');
   var presences = {};
-  var adventure = new AdventureEngine();
+  var adventure = AdventureEngine.initState();
   return {
     state: {
       presences: presences,
@@ -1386,7 +1392,7 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
     state.presences[presence.userId] = presence;
     logger.info('%q joined Adventure match', presence.userId);
   });
-  var positions = state.adventure.getAllBeastPositions();
+  var positions = AdventureEngine.getAllBeastPositions(state.adventure);
   var data = encodeMatchUpdate({
     moves: positions,
     shoots: [],
@@ -1429,7 +1435,7 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
     }
     logger.info('Received action %v', beastAction, message.opCode);
   });
-  var updates = state.adventure.proceedActions(moves, shoots);
+  var updates = AdventureEngine.proceedActions(state.adventure, moves, shoots);
   if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length) {
     var data = encodeMatchUpdate(updates);
     dispatcher.broadcastMessage(1, data.buffer.slice(data.byteOffset));
