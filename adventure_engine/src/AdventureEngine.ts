@@ -1,48 +1,5 @@
-import { getPixelIndexesFromArea, getPixelXYFromIndex } from "./utils"
-
-enum BeastAction {
-  move,
-  shoot
-}
-
-// info about an action, for both move and shoot
-interface ActionInfo {
-  // beast id
-  beastId: number
-  // target position
-  pixel: number
-  // weapon_id - only for shoot action
-  weaponId?: number
-}
-
-interface WeaponAttrs {
-  // damage area, default {x: 0, y: 0, w: 1, h: 1}
-  damageArea?: {x: number, y: number, w: number, h: number}
-  // damage, default 1
-  damage?: number
-  // + shoot range, default 0
-  incrRange?: number
-}
-
-interface VehicleAttrs {
-  // + move range, default 0
-  incrRange?: number
-  // - damage receive, default 0
-  decrDamage?: number
-}
-
-interface BeastAttrs {
-  health?: number
-  moveRange?: number
-  shootRange?: number
-}
-
-interface AdventureUpdate {
-  moves: ActionInfo[]
-  shoots: ActionInfo[]
-  changedBeasts: number[]
-  changedBeastAttrs: BeastAttrs[]
-}
+import { ActionInfo, AdventureUpdate, BeastAttrs, WeaponAttrs } from './types'
+import { getPixelIndexesFromArea, getPixelXYFromIndex } from './utils'
 
 export class AdventureEngine {
   // beast_id => attributes
@@ -67,12 +24,22 @@ export class AdventureEngine {
   beastEquipmentsMap = new Map<number, [number, number][]>()
 
   constructor() {
-    // load weapons data on-chain
+    // TODO load weapons data on-chain
     this.weaponAttrsMap.set(1, { damage: 1, damageArea: {x: -1, y: -1, w: 3, h: 3} })
   }
 
-  onboardBeast(beastId: number, equipments: [number, number][], attrs?: BeastAttrs) {
+  getAllBeastPositions(): ActionInfo[] {
+    // const positions: ActionInfo[] = Object.keys(this.beastPixelMap).map(id => Number(id)).map(id => ({beastId: id, pixel: this.beastPixelMap.get(id)}))
+    const positions: ActionInfo[] = Array.from(this.beastPixelMap.entries()).map(entry => ({beastId: entry[0], pixel: entry[1]}))
 
+    return positions
+  }
+
+  onboardBeast(beastId: number, pixel: number, equipments: [number, number][], attrs?: BeastAttrs) {
+    // TODO load beast location, equipments, attributes on-chain
+    this.executeMove({beastId, pixel})
+    this.beastEquipmentsMap.set(beastId, equipments)
+    this.beastAttrsMap.set(beastId, attrs)
   }
 
   proceedActions(moves: ActionInfo[], shoots: ActionInfo[]): AdventureUpdate {
@@ -136,12 +103,12 @@ export class AdventureEngine {
   }
 
   private executeShoot(shoot: ActionInfo, changedBeasts: Set<number>) {
-    const { beastId, pixel, weaponId } = shoot
+    const { beastId, pixel, type } = shoot
 
     // TODO check if beast equips this weapon
 
     // get the weapon attributes or default
-    const { damage, damageArea } = this.weaponAttrsMap.get(weaponId) || { damage: 1, damageArea: {x: 0, y: 0, w: 1, h: 1} }
+    const { damage, damageArea } = this.weaponAttrsMap.get(type) || { damage: 1, damageArea: {x: 0, y: 0, w: 1, h: 1} }
     const [tarx, tary] = getPixelXYFromIndex(pixel, 100)
     const [x, y, w, h] = [tarx + damageArea.x, tary + damageArea.y, damageArea.w, damageArea.h]
 

@@ -1,31 +1,179 @@
-var TextEncoder = function () {
-  function TextEncoder() {}
-  TextEncoder.prototype.encode = function (input) {
-    var utf8 = unescape(encodeURIComponent(input));
-    var result = new Uint8Array(utf8.length);
-    for (var i = 0; i < utf8.length; i++) {
-      result[i] = utf8.charCodeAt(i);
+function getPixelIndex(x, y, w) {
+  return y * w + x;
+}
+function getPixelXYFromIndex(index, w) {
+  var x = index % w;
+  var y = (index - x) / w;
+  return [x, y];
+}
+
+function getPixelIndexesFromArea(area, mapWidth) {
+  var indexes = [];
+  for (var j = 0; j < area.h; j++) {
+    var index = getPixelIndex(area.x, area.y + j, mapWidth);
+    for (var i = 0; i < area.w; i++) {
+      indexes.push(index + i);
     }
-    return result;
+  }
+  return indexes;
+}
+
+var AdventureEngine = function () {
+  function AdventureEngine() {
+    this.beastAttrsMap = new Map();
+    this.beastPixelMap = new Map();
+    this.pixelBeastMap = new Map();
+    this.weaponAttrsMap = new Map();
+    this.pixelItemsMap = new Map();
+    this.pixelVehicleMap = new Map();
+    this.beastEquipmentsMap = new Map();
+    this.weaponAttrsMap.set(1, {
+      damage: 1,
+      damageArea: {
+        x: -1,
+        y: -1,
+        w: 3,
+        h: 3
+      }
+    });
+  }
+  AdventureEngine.prototype.getAllBeastPositions = function () {
+    var positions = Array.from(this.beastPixelMap.entries()).map(function (entry) {
+      return {
+        beastId: entry[0],
+        pixel: entry[1]
+      };
+    });
+    return positions;
   };
-  return TextEncoder;
-}();
-var TextDecoder = function () {
-  function TextDecoder() {}
-  TextDecoder.prototype.decode = function (input) {
-    var bytes = new Uint8Array(input);
-    var result = '';
-    for (var i = 0; i < bytes.length; i++) {
-      result += String.fromCharCode(bytes[i]);
+  AdventureEngine.prototype.onboardBeast = function (beastId, pixel, equipments, attrs) {
+    this.executeMove({
+      beastId: beastId,
+      pixel: pixel
+    });
+    this.beastEquipmentsMap.set(beastId, equipments);
+    this.beastAttrsMap.set(beastId, attrs);
+  };
+  AdventureEngine.prototype.proceedActions = function (moves, shoots) {
+    var _this = this;
+    var updates = {
+      moves: [],
+      shoots: [],
+      changedBeasts: [],
+      changedBeastAttrs: []
+    };
+    for (var _i = 0, moves_1 = moves; _i < moves_1.length; _i++) {
+      var move = moves_1[_i];
+      var beastId = move.beastId,
+        pixel = move.pixel;
+      this.beastAttrsMap.get(beastId);
+      var curpos = this.beastPixelMap.get(beastId);
+      if (curpos >= 0) {
+        if (this.pixelBeastMap.get(pixel) === undefined) {
+          this.executeMove(move);
+          updates.moves.push(move);
+        }
+      }
     }
-    try {
-      return decodeURIComponent(escape(result));
-    } catch (e) {
-      throw new Error('The encoded data was not valid.');
+    var changedBeastSet = new Set();
+    for (var _a = 0, shoots_1 = shoots; _a < shoots_1.length; _a++) {
+      var shoot = shoots_1[_a];
+      var beastId = shoot.beastId,
+        pixel = shoot.pixel;
+      var curpos = this.beastPixelMap.get(beastId);
+      if (curpos >= 0) {
+        this.executeShoot(shoot, changedBeastSet);
+        updates.shoots.push(shoot);
+      }
+    }
+    updates.changedBeasts = Array.from(changedBeastSet);
+    updates.changedBeastAttrs = updates.changedBeasts.map(function (beastId) {
+      return _this.beastAttrsMap.get(beastId);
+    });
+    return updates;
+  };
+  AdventureEngine.prototype.executeMove = function (move) {
+    var beastId = move.beastId,
+      pixel = move.pixel;
+    var from = this.beastPixelMap.get(beastId);
+    this.beastPixelMap.set(beastId, pixel);
+    this.pixelBeastMap.set(pixel, beastId);
+    this.pixelBeastMap["delete"](from);
+  };
+  AdventureEngine.prototype.executeShoot = function (shoot, changedBeasts) {
+    shoot.beastId;
+      var pixel = shoot.pixel,
+      type = shoot.type;
+    var _a = this.weaponAttrsMap.get(type) || {
+        damage: 1,
+        damageArea: {
+          x: 0,
+          y: 0,
+          w: 1,
+          h: 1
+        }
+      },
+      damage = _a.damage,
+      damageArea = _a.damageArea;
+    var _b = getPixelXYFromIndex(pixel, 100),
+      tarx = _b[0],
+      tary = _b[1];
+    var _c = [tarx + damageArea.x, tary + damageArea.y, damageArea.w, damageArea.h],
+      x = _c[0],
+      y = _c[1],
+      w = _c[2],
+      h = _c[3];
+    var damagedPixels = getPixelIndexesFromArea({
+      x: x,
+      y: y,
+      w: w,
+      h: h
+    }, 100);
+    for (var _i = 0, damagedPixels_1 = damagedPixels; _i < damagedPixels_1.length; _i++) {
+      var target = damagedPixels_1[_i];
+      var update = this.receiveDamage(target, damage);
+      if (update) {
+        var beastId_1 = update[0],
+          attrs = update[1];
+        this.beastAttrsMap.set(beastId_1, attrs);
+        changedBeasts.add(beastId_1);
+      }
     }
   };
-  return TextDecoder;
+  AdventureEngine.prototype.receiveDamage = function (pixel, damage) {
+    var beastId = this.pixelBeastMap.get(pixel);
+    if (beastId === undefined) {
+      return undefined;
+    }
+    var attrs = this.beastAttrsMap.get(beastId);
+    if (attrs === undefined) {
+      return undefined;
+    }
+    if (attrs.health === 0) {
+      return undefined;
+    }
+    var health = Math.max(attrs.health - damage, 0);
+    if (health === 0) {
+      this.beastDie(beastId);
+    }
+    return [beastId, {
+      health: health
+    }];
+  };
+  AdventureEngine.prototype.beastDie = function (beastId) {
+    var pos = this.beastPixelMap.get(beastId);
+    this.pixelBeastMap["delete"](pos);
+    this.beastPixelMap["delete"](beastId);
+    this.beastAttrsMap["delete"](beastId);
+  };
+  return AdventureEngine;
 }();
+
+var BeastActionType;
+(function (BeastActionType) {
+  BeastActionType[BeastActionType["move"] = 0] = "move";
+  BeastActionType[BeastActionType["shoot"] = 1] = "shoot";
+})(BeastActionType || (BeastActionType = {}));
 
 var SIZEOF_SHORT = 2;
 var SIZEOF_INT = 4;
@@ -1016,11 +1164,16 @@ var BeastAction = function () {
   BeastAction.prototype.target = function () {
     return this.bb.readInt32(this.bb_pos + 4);
   };
-  BeastAction.sizeOf = function () {
-    return 8;
+  BeastAction.prototype.type = function () {
+    return this.bb.readInt16(this.bb_pos + 8);
   };
-  BeastAction.createBeastAction = function (builder, id, target) {
-    builder.prep(4, 8);
+  BeastAction.sizeOf = function () {
+    return 12;
+  };
+  BeastAction.createBeastAction = function (builder, id, target, type) {
+    builder.prep(4, 12);
+    builder.pad(2);
+    builder.writeInt16(type);
     builder.writeInt32(target);
     builder.writeInt32(id);
     return builder.offset();
@@ -1047,7 +1200,7 @@ var UpdateState = function () {
   };
   UpdateState.prototype.beastMoves = function (index, obj) {
     var offset = this.bb.__offset(this.bb_pos, 4);
-    return offset ? (obj || new BeastAction()).__init(this.bb.__vector(this.bb_pos + offset) + index * 8, this.bb) : null;
+    return offset ? (obj || new BeastAction()).__init(this.bb.__vector(this.bb_pos + offset) + index * 12, this.bb) : null;
   };
   UpdateState.prototype.beastMovesLength = function () {
     var offset = this.bb.__offset(this.bb_pos, 4);
@@ -1055,51 +1208,76 @@ var UpdateState = function () {
   };
   UpdateState.prototype.beastShoots = function (index, obj) {
     var offset = this.bb.__offset(this.bb_pos, 6);
-    return offset ? (obj || new BeastAction()).__init(this.bb.__vector(this.bb_pos + offset) + index * 8, this.bb) : null;
+    return offset ? (obj || new BeastAction()).__init(this.bb.__vector(this.bb_pos + offset) + index * 12, this.bb) : null;
   };
   UpdateState.prototype.beastShootsLength = function () {
     var offset = this.bb.__offset(this.bb_pos, 6);
     return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
   };
-  UpdateState.prototype.beastDeaths = function (index) {
+  UpdateState.prototype.beastChange = function (index) {
     var offset = this.bb.__offset(this.bb_pos, 8);
     return offset ? this.bb.readInt32(this.bb.__vector(this.bb_pos + offset) + index * 4) : 0;
   };
-  UpdateState.prototype.beastDeathsLength = function () {
+  UpdateState.prototype.beastChangeLength = function () {
     var offset = this.bb.__offset(this.bb_pos, 8);
     return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
   };
-  UpdateState.prototype.beastDeathsArray = function () {
+  UpdateState.prototype.beastChangeArray = function () {
     var offset = this.bb.__offset(this.bb_pos, 8);
     return offset ? new Int32Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + offset), this.bb.__vector_len(this.bb_pos + offset)) : null;
   };
+  UpdateState.prototype.beastChangeHp = function (index) {
+    var offset = this.bb.__offset(this.bb_pos, 10);
+    return offset ? this.bb.readInt16(this.bb.__vector(this.bb_pos + offset) + index * 2) : 0;
+  };
+  UpdateState.prototype.beastChangeHpLength = function () {
+    var offset = this.bb.__offset(this.bb_pos, 10);
+    return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
+  };
+  UpdateState.prototype.beastChangeHpArray = function () {
+    var offset = this.bb.__offset(this.bb_pos, 10);
+    return offset ? new Int16Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + offset), this.bb.__vector_len(this.bb_pos + offset)) : null;
+  };
   UpdateState.startUpdateState = function (builder) {
-    builder.startObject(3);
+    builder.startObject(4);
   };
   UpdateState.addBeastMoves = function (builder, beastMovesOffset) {
     builder.addFieldOffset(0, beastMovesOffset, 0);
   };
   UpdateState.startBeastMovesVector = function (builder, numElems) {
-    builder.startVector(8, numElems, 4);
+    builder.startVector(12, numElems, 4);
   };
   UpdateState.addBeastShoots = function (builder, beastShootsOffset) {
     builder.addFieldOffset(1, beastShootsOffset, 0);
   };
   UpdateState.startBeastShootsVector = function (builder, numElems) {
-    builder.startVector(8, numElems, 4);
+    builder.startVector(12, numElems, 4);
   };
-  UpdateState.addBeastDeaths = function (builder, beastDeathsOffset) {
-    builder.addFieldOffset(2, beastDeathsOffset, 0);
+  UpdateState.addBeastChange = function (builder, beastChangeOffset) {
+    builder.addFieldOffset(2, beastChangeOffset, 0);
   };
-  UpdateState.createBeastDeathsVector = function (builder, data) {
+  UpdateState.createBeastChangeVector = function (builder, data) {
     builder.startVector(4, data.length, 4);
     for (var i = data.length - 1; i >= 0; i--) {
       builder.addInt32(data[i]);
     }
     return builder.endVector();
   };
-  UpdateState.startBeastDeathsVector = function (builder, numElems) {
+  UpdateState.startBeastChangeVector = function (builder, numElems) {
     builder.startVector(4, numElems, 4);
+  };
+  UpdateState.addBeastChangeHp = function (builder, beastChangeHpOffset) {
+    builder.addFieldOffset(3, beastChangeHpOffset, 0);
+  };
+  UpdateState.createBeastChangeHpVector = function (builder, data) {
+    builder.startVector(2, data.length, 2);
+    for (var i = data.length - 1; i >= 0; i--) {
+      builder.addInt16(data[i]);
+    }
+    return builder.endVector();
+  };
+  UpdateState.startBeastChangeHpVector = function (builder, numElems) {
+    builder.startVector(2, numElems, 2);
   };
   UpdateState.endUpdateState = function (builder) {
     var offset = builder.endObject();
@@ -1111,25 +1289,86 @@ var UpdateState = function () {
   UpdateState.finishSizePrefixedUpdateStateBuffer = function (builder, offset) {
     builder.finish(offset, undefined, true);
   };
-  UpdateState.createUpdateState = function (builder, beastMovesOffset, beastShootsOffset, beastDeathsOffset) {
+  UpdateState.createUpdateState = function (builder, beastMovesOffset, beastShootsOffset, beastChangeOffset, beastChangeHpOffset) {
     UpdateState.startUpdateState(builder);
     UpdateState.addBeastMoves(builder, beastMovesOffset);
     UpdateState.addBeastShoots(builder, beastShootsOffset);
-    UpdateState.addBeastDeaths(builder, beastDeathsOffset);
+    UpdateState.addBeastChange(builder, beastChangeOffset);
+    UpdateState.addBeastChangeHp(builder, beastChangeHpOffset);
     return UpdateState.endUpdateState(builder);
   };
   return UpdateState;
 }();
 
+var TextEncoder = function () {
+  function TextEncoder() {}
+  TextEncoder.prototype.encode = function (input) {
+    var utf8 = unescape(encodeURIComponent(input));
+    var result = new Uint8Array(utf8.length);
+    for (var i = 0; i < utf8.length; i++) {
+      result[i] = utf8.charCodeAt(i);
+    }
+    return result;
+  };
+  return TextEncoder;
+}();
+var TextDecoder = function () {
+  function TextDecoder() {}
+  TextDecoder.prototype.decode = function (input) {
+    var bytes = new Uint8Array(input);
+    var result = '';
+    for (var i = 0; i < bytes.length; i++) {
+      result += String.fromCharCode(bytes[i]);
+    }
+    try {
+      return decodeURIComponent(escape(result));
+    } catch (e) {
+      throw new Error('The encoded data was not valid.');
+    }
+  };
+  return TextDecoder;
+}();
+function encodeMatchUpdate(updates) {
+  var builder = new Builder(128);
+  var executedMoves = updates.moves,
+    executedShoots = updates.shoots,
+    changedBeastAttrs = updates.changedBeastAttrs,
+    changedBeastIds = updates.changedBeasts;
+  var changedBeastHps = changedBeastAttrs.map(function (attrs) {
+    return attrs.health;
+  });
+  UpdateState.startBeastMovesVector(builder, executedMoves.length);
+  for (var _i = 0, executedMoves_1 = executedMoves; _i < executedMoves_1.length; _i++) {
+    var move = executedMoves_1[_i];
+    BeastAction.createBeastAction(builder, move.beastId, move.pixel, move.type);
+  }
+  var moves = builder.endVector();
+  UpdateState.startBeastShootsVector(builder, executedShoots.length);
+  for (var _a = 0, executedShoots_1 = executedShoots; _a < executedShoots_1.length; _a++) {
+    var shoot = executedShoots_1[_a];
+    BeastAction.createBeastAction(builder, shoot.beastId, shoot.pixel, shoot.type);
+  }
+  var shoots = builder.endVector();
+  var changeIds = UpdateState.createBeastChangeVector(builder, changedBeastIds);
+  var changeHps = UpdateState.createBeastChangeHpVector(builder, changedBeastHps);
+  UpdateState.startUpdateState(builder);
+  UpdateState.addBeastMoves(builder, moves);
+  UpdateState.addBeastShoots(builder, shoots);
+  UpdateState.addBeastChange(builder, changeIds);
+  UpdateState.addBeastChangeHp(builder, changeHps);
+  var end = UpdateState.endUpdateState(builder);
+  builder.finish(end);
+  return builder.asUint8Array();
+}
+
 function matchInit(ctx, logger, nk, params) {
   logger.debug('Lobby match created');
   var presences = {};
+  var adventure = new AdventureEngine();
   return {
     state: {
       presences: presences,
-      beastPosition: {},
-      positionBeast: {},
-      beastOnboard: []
+      adventure: adventure
     },
     tickRate: 1,
     label: 'PixelAdventure'
@@ -1147,15 +1386,13 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
     state.presences[presence.userId] = presence;
     logger.info('%q joined Adventure match', presence.userId);
   });
-  var positions = Object.keys(state.beastPosition).map(function (id) {
-    return Number(id);
-  }).map(function (id) {
-    return {
-      id: id,
-      target: state.beastPosition[id]
-    };
+  var positions = state.adventure.getAllBeastPositions();
+  var data = encodeMatchUpdate({
+    moves: positions,
+    shoots: [],
+    changedBeasts: [],
+    changedBeastAttrs: []
   });
-  var data = encodeMatchUpdate(positions, [], []);
   dispatcher.broadcastMessage(0, data.buffer.slice(data.byteOffset), presences, undefined, true);
   return {
     state: state
@@ -1170,84 +1407,14 @@ function matchLeave(ctx, logger, nk, dispatcher, tick, state, presences) {
     state: state
   };
 }
-function executeMove(state, move) {
-  var id = move.id,
-    target = move.target;
-  var from = state.beastPosition[id];
-  state.beastPosition[id] = target;
-  state.positionBeast[target] = id;
-  delete state.positionBeast[from];
-}
-function executeShoot(state, shoot) {
-  var target = shoot.target;
-  if (state.positionBeast[target] >= 0) {
-    var die = state.positionBeast[target];
-    delete state.positionBeast[target];
-    delete state.beastPosition[die];
-    return die;
-  }
-  return undefined;
-}
-function matchUpdate(state, moves, shoots) {
-  var executedMoves = [];
-  for (var _i = 0, moves_1 = moves; _i < moves_1.length; _i++) {
-    var move = moves_1[_i];
-    var target = move.target;
-    if (state.positionBeast[target] === undefined) {
-      executeMove(state, move);
-      executedMoves.push(move);
-    }
-  }
-  var executedShoots = [];
-  var beastGone = [];
-  for (var _a = 0, shoots_1 = shoots; _a < shoots_1.length; _a++) {
-    var shoot = shoots_1[_a];
-    var id = shoot.id;
-    if (state.beastPosition[id] >= 0) {
-      var die = executeShoot(state, shoot);
-      executedShoots.push(shoot);
-      if (die) {
-        beastGone.push(die);
-      }
-    }
-  }
-  return {
-    executedMoves: executedMoves,
-    executedShoots: executedShoots,
-    beastGone: beastGone
-  };
-}
-function encodeMatchUpdate(executedMoves, executedShoots, beastGone) {
-  var builder = new Builder(128);
-  UpdateState.startBeastMovesVector(builder, executedMoves.length);
-  for (var _i = 0, executedMoves_1 = executedMoves; _i < executedMoves_1.length; _i++) {
-    var move = executedMoves_1[_i];
-    BeastAction.createBeastAction(builder, move.id, move.target);
-  }
-  var moves = builder.endVector();
-  UpdateState.startBeastShootsVector(builder, executedShoots.length);
-  for (var _a = 0, executedShoots_1 = executedShoots; _a < executedShoots_1.length; _a++) {
-    var shoot = executedShoots_1[_a];
-    BeastAction.createBeastAction(builder, shoot.id, shoot.target);
-  }
-  var shoots = builder.endVector();
-  var deaths = UpdateState.createBeastDeathsVector(builder, beastGone);
-  UpdateState.startUpdateState(builder);
-  UpdateState.addBeastMoves(builder, moves);
-  UpdateState.addBeastShoots(builder, shoots);
-  UpdateState.addBeastDeaths(builder, deaths);
-  var end = UpdateState.endUpdateState(builder);
-  builder.finish(end);
-  return builder.asUint8Array();
-}
 function decodeAction(data) {
   var buffer = data.buffer;
   var view = new DataView(buffer);
-  var id = view.getInt32(0, true);
-  var target = view.getInt32(4, true);
+  var beastId = view.getInt32(0, true);
+  var pixel = view.getInt32(4, true);
   return {
-    id: id,
-    target: target
+    beastId: beastId,
+    pixel: pixel
   };
 }
 function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
@@ -1262,12 +1429,9 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
     }
     logger.info('Received action %v', beastAction, message.opCode);
   });
-  var _a = matchUpdate(state, moves, shoots),
-    executedMoves = _a.executedMoves,
-    executedShoots = _a.executedShoots,
-    beastGone = _a.beastGone;
-  if (executedMoves.length || executedShoots.length || beastGone.length) {
-    var data = encodeMatchUpdate(executedMoves, executedShoots, beastGone);
+  var updates = state.adventure.proceedActions(moves, shoots);
+  if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length) {
+    var data = encodeMatchUpdate(updates);
     dispatcher.broadcastMessage(1, data.buffer.slice(data.byteOffset));
   }
   return {

@@ -2,13 +2,15 @@
 struct BeastAction {
     id:int;
     target:int;
+    type: short;
 }
 
 // The main UpdateState table.
 table UpdateState {
     beast_moves:[BeastAction]; // A vector of BeastAction for beastMoves.
     beast_shoots:[BeastAction]; // A vector of BeastAction for beastShoots.
-    beast_deaths:[int]; // A vector of ints for beastDeaths.
+    beast_change:[int]; // A vector of ints for changed beasts.
+    beast_change_hp:[short]; // A vector of changed attributes.
 }
 
 // Define the root type.

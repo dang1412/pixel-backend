@@ -9,6 +9,7 @@
     "target": "es5",
     "module": "ESNext",
     "strict": false,
+    "lib": ["es2015"]
   },
   "files": [
     "./node_modules/nakama-runtime/index.d.ts",

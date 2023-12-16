@@ -19,12 +19,18 @@ target():number {
   return this.bb!.readInt32(this.bb_pos + 4);
 }
 
-static sizeOf():number {
-  return 8;
+type():number {
+  return this.bb!.readInt16(this.bb_pos + 8);
 }
 
-static createBeastAction(builder:flatbuffers.Builder, id: number, target: number):flatbuffers.Offset {
-  builder.prep(4, 8);
+static sizeOf():number {
+  return 12;
+}
+
+static createBeastAction(builder:flatbuffers.Builder, id: number, target: number, type: number):flatbuffers.Offset {
+  builder.prep(4, 12);
+  builder.pad(2);
+  builder.writeInt16(type);
   builder.writeInt32(target);
   builder.writeInt32(id);
   return builder.offset();

@@ -25,7 +25,7 @@ static getSizePrefixedRootAsUpdateState(bb:flatbuffers.ByteBuffer, obj?:UpdateSt
 
 beastMoves(index: number, obj?:BeastAction):BeastAction|null {
   const offset = this.bb!.__offset(this.bb_pos, 4);
-  return offset ? (obj || new BeastAction()).__init(this.bb!.__vector(this.bb_pos + offset) + index * 8, this.bb!) : null;
+  return offset ? (obj || new BeastAction()).__init(this.bb!.__vector(this.bb_pos + offset) + index * 12, this.bb!) : null;
 }
 
 beastMovesLength():number {
@@ -35,7 +35,7 @@ beastMovesLength():number {
 
 beastShoots(index: number, obj?:BeastAction):BeastAction|null {
   const offset = this.bb!.__offset(this.bb_pos, 6);
-  return offset ? (obj || new BeastAction()).__init(this.bb!.__vector(this.bb_pos + offset) + index * 8, this.bb!) : null;
+  return offset ? (obj || new BeastAction()).__init(this.bb!.__vector(this.bb_pos + offset) + index * 12, this.bb!) : null;
 }
 
 beastShootsLength():number {
@@ -43,23 +43,38 @@ beastShootsLength():number {
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
-beastDeaths(index: number):number|null {
+beastChange(index: number):number|null {
   const offset = this.bb!.__offset(this.bb_pos, 8);
   return offset ? this.bb!.readInt32(this.bb!.__vector(this.bb_pos + offset) + index * 4) : 0;
 }
 
-beastDeathsLength():number {
+beastChangeLength():number {
   const offset = this.bb!.__offset(this.bb_pos, 8);
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
-beastDeathsArray():Int32Array|null {
+beastChangeArray():Int32Array|null {
   const offset = this.bb!.__offset(this.bb_pos, 8);
   return offset ? new Int32Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
 }
 
+beastChangeHp(index: number):number|null {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readInt16(this.bb!.__vector(this.bb_pos + offset) + index * 2) : 0;
+}
+
+beastChangeHpLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
+beastChangeHpArray():Int16Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? new Int16Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
+}
+
 static startUpdateState(builder:flatbuffers.Builder) {
-  builder.startObject(3);
+  builder.startObject(4);
 }
 
 static addBeastMoves(builder:flatbuffers.Builder, beastMovesOffset:flatbuffers.Offset) {
@@ -67,7 +82,7 @@ static addBeastMoves(builder:flatbuffers.Builder, beastMovesOffset:flatbuffers.O
 }
 
 static startBeastMovesVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(8, numElems, 4);
+  builder.startVector(12, numElems, 4);
 }
 
 static addBeastShoots(builder:flatbuffers.Builder, beastShootsOffset:flatbuffers.Offset) {
@@ -75,19 +90,19 @@ static addBeastShoots(builder:flatbuffers.Builder, beastShootsOffset:flatbuffers
 }
 
 static startBeastShootsVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(8, numElems, 4);
+  builder.startVector(12, numElems, 4);
 }
 
-static addBeastDeaths(builder:flatbuffers.Builder, beastDeathsOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(2, beastDeathsOffset, 0);
+static addBeastChange(builder:flatbuffers.Builder, beastChangeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, beastChangeOffset, 0);
 }
 
-static createBeastDeathsVector(builder:flatbuffers.Builder, data:number[]|Int32Array):flatbuffers.Offset;
+static createBeastChangeVector(builder:flatbuffers.Builder, data:number[]|Int32Array):flatbuffers.Offset;
 /**
  * @deprecated This Uint8Array overload will be removed in the future.
  */
-static createBeastDeathsVector(builder:flatbuffers.Builder, data:number[]|Uint8Array):flatbuffers.Offset;
-static createBeastDeathsVector(builder:flatbuffers.Builder, data:number[]|Int32Array|Uint8Array):flatbuffers.Offset {
+static createBeastChangeVector(builder:flatbuffers.Builder, data:number[]|Uint8Array):flatbuffers.Offset;
+static createBeastChangeVector(builder:flatbuffers.Builder, data:number[]|Int32Array|Uint8Array):flatbuffers.Offset {
   builder.startVector(4, data.length, 4);
   for (let i = data.length - 1; i >= 0; i--) {
     builder.addInt32(data[i]!);
@@ -95,8 +110,29 @@ static createBeastDeathsVector(builder:flatbuffers.Builder, data:number[]|Int32A
   return builder.endVector();
 }
 
-static startBeastDeathsVector(builder:flatbuffers.Builder, numElems:number) {
+static startBeastChangeVector(builder:flatbuffers.Builder, numElems:number) {
   builder.startVector(4, numElems, 4);
+}
+
+static addBeastChangeHp(builder:flatbuffers.Builder, beastChangeHpOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(3, beastChangeHpOffset, 0);
+}
+
+static createBeastChangeHpVector(builder:flatbuffers.Builder, data:number[]|Int16Array):flatbuffers.Offset;
+/**
+ * @deprecated This Uint8Array overload will be removed in the future.
+ */
+static createBeastChangeHpVector(builder:flatbuffers.Builder, data:number[]|Uint8Array):flatbuffers.Offset;
+static createBeastChangeHpVector(builder:flatbuffers.Builder, data:number[]|Int16Array|Uint8Array):flatbuffers.Offset {
+  builder.startVector(2, data.length, 2);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addInt16(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startBeastChangeHpVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(2, numElems, 2);
 }
 
 static endUpdateState(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -112,11 +148,12 @@ static finishSizePrefixedUpdateStateBuffer(builder:flatbuffers.Builder, offset:f
   builder.finish(offset, undefined, true);
 }
 
-static createUpdateState(builder:flatbuffers.Builder, beastMovesOffset:flatbuffers.Offset, beastShootsOffset:flatbuffers.Offset, beastDeathsOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createUpdateState(builder:flatbuffers.Builder, beastMovesOffset:flatbuffers.Offset, beastShootsOffset:flatbuffers.Offset, beastChangeOffset:flatbuffers.Offset, beastChangeHpOffset:flatbuffers.Offset):flatbuffers.Offset {
   UpdateState.startUpdateState(builder);
   UpdateState.addBeastMoves(builder, beastMovesOffset);
   UpdateState.addBeastShoots(builder, beastShootsOffset);
-  UpdateState.addBeastDeaths(builder, beastDeathsOffset);
+  UpdateState.addBeastChange(builder, beastChangeOffset);
+  UpdateState.addBeastChangeHp(builder, beastChangeHpOffset);
   return UpdateState.endUpdateState(builder);
 }
 }
