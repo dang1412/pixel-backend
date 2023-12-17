@@ -58,8 +58,19 @@ export class PixelAdventure {
     sound.add('shoot', '/sounds/sword.mp3')
   }
 
-  outputCtrl(opcode: number, beastId: number, pixel: number, type?: number) {
-    console.log('outputCtrl', opcode, beastId, pixel, type)
+  /**
+   * Output control for beast or item drop
+   * @param opcode 
+   * - 0: move
+   * - 1: shoot
+   * - 2: onboard beast
+   * - 99: item drop on map
+   * @param id 
+   * @param pixel 
+   * @param type 
+   */
+  outputCtrl(opcode: number, id: number, pixel: number, type?: number) {
+    console.log('outputCtrl', opcode, id, pixel, type)
   }
 
   async updateMatch(updates: AdventureUpdate) {

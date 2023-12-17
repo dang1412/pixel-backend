@@ -23,6 +23,7 @@ export class PixelCharacter {
   rangeDraw = new Graphics()
   characterDraw = new Sprite()
   hpDraw = new Graphics()
+  equipDraw = new Sprite()
 
   // 
   id: number
@@ -64,6 +65,7 @@ export class PixelCharacter {
     circle.visible = false
     this.container.addChild(circle)
 
+
     // draw character
     const texture = await Texture.fromURL(imageUrl)
     const character = this.characterDraw
@@ -71,28 +73,43 @@ export class PixelCharacter {
     const ratio = Math.min(character.width / pixelSize, character.height / pixelSize)
     character.height = character.height / ratio
     character.width = character.width / ratio
-
-    character.x = -(character.width - pixelSize) / 2
-    character.y = -(character.height - pixelSize) / 2
+    
+    // character.x = -(character.width - pixelSize) / 2
+    // character.y = -(character.height - pixelSize) / 2
+    character.anchor.set(0.5, 0.5)
+    character.x = character.y = pixelSize / 2
     // character.tint = 0xff0000
     this.container.addChild(character)
+
+    // draw equip
+    const equipDraw = this.equipDraw
+    equipDraw.texture = await Texture.fromURL('images/bluelight.png')
+    equipDraw.width = pixelSize * 1.5
+    equipDraw.height = pixelSize * 1.5
+    equipDraw.x = equipDraw.y = pixelSize / 2
+    // equipDraw.x = -(equipDraw.width - pixelSize) / 2
+    // equipDraw.y = -(equipDraw.height - pixelSize) / 2
+    equipDraw.anchor.set(0.5, 0.5)
+    this.container.addChild(equipDraw)
 
     // draw HP
     let bar = this.hpDraw
     this.container.addChild(bar)
     // this.updateHp(2)
 
+    
+
     // container position
     scene.setImagePosition(this.container, this.x, this.y)
 
     // events
-    character.interactive = true
-    character.on('mouseover', () => {
+    this.container.interactive = true
+    this.container.on('mouseover', () => {
       circle.visible = true
       scene.viewport.dirty = true
     })
 
-    character.on('mouseout', () => {
+    this.container.on('mouseout', () => {
       if (this.selecting) return
       circle.visible = false
       scene.viewport.dirty = true
@@ -140,8 +157,8 @@ export class PixelCharacter {
       })
     }
 
-    character.on('mousedown', controlstart)
-    character.on('touchstart', controlstart)
+    this.container.on('mousedown', controlstart)
+    this.container.on('touchstart', controlstart)
   }
 
   updateHp(hp: number) {
