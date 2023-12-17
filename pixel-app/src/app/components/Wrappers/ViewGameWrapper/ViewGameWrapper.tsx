@@ -12,7 +12,7 @@ export function ViewGameWrapper() {
   const { account } = useLogin()
   const adventureRef = useRef<PixelAdventure>()
 
-  const { images, ownedImages, loadImages } = useImages()
+  const { images, loadImages } = useImages()
 
   useEffect(() => {
     loadImages()
@@ -32,17 +32,10 @@ export function ViewGameWrapper() {
     }
 
     // input from server
-    service.setHandleUpdate(async (moves, shoots, deaths) => {
-      console.log('Handle update', moves, shoots)
-      // clear select before execute actions
-      adv.map.scene.clearSelect()
-      await Promise.all(moves.map(m => adv.move(m[0], m[1])))
-      await Promise.all(shoots.map(s => adv.shoot(s[0], s[1])))
-
-      for (const id of deaths) {
-        adv.kill(id)
-      }
-    })
+    service.handleMatchUpdates = async (updates) => {
+      console.log('Handle update', updates)
+      await adv.updateMatch(updates)
+    }
   }, [])
 
   return (

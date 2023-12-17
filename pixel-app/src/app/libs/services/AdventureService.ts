@@ -6,7 +6,7 @@ import type { InjectedAccountWithMeta } from '@polkadot/extension-inject/types'
 
 import { Client, Match, Session, Socket } from '@heroiclabs/nakama-js'
 import { v4 as uuidv4 } from 'uuid'
-import {  } from 'adventure_engine'
+import { AdventureUpdate, decodeMatchUpdate } from 'adventure_engine'
 
 // import WebSocket from 'ws'
 
@@ -15,7 +15,7 @@ import {  } from 'adventure_engine'
 
 import metadata from './ink/pixel_adventure.json'
 import { CONTRACT_ADDRESS_ADVENTURE } from './ink'
-import { doMessage, doQuery, stringToNumber } from './utils'
+import { doMessage, doQuery } from './utils'
 
 // import { BeastAction } from './buffer/beast-action'
 // import { UpdateState } from './buffer/update-state'
@@ -76,7 +76,7 @@ export class AdventureService {
   socket?: Socket
   matchId?: string
 
-  handleEvent?: (moves: [number, number][], shoots: [number, number][], deaths: number[]) => void
+  handleMatchUpdates?: (updates: AdventureUpdate) => void
 
   constructor(private api: ApiPromise) {
     let contract = this.contract = new ContractPromise(
@@ -148,15 +148,11 @@ export class AdventureService {
     this.socket.onmatchdata = (matchState) => {
       console.log('matchState', matchState.data)
       const updates = decodeMatchUpdate(matchState.data)
-      if (this.handleEvent) {
-        this.handleEvent(...updates)
+      if (this.handleMatchUpdates) {
+        this.handleMatchUpdates(updates)
       }
     }
     console.log('this.socket', this.socket)
-  }
-
-  setHandleUpdate(handler: (moves: [number, number][], shoots: [number, number][], deaths: number[]) => void) {
-    this.handleEvent = handler
   }
 
   async setAccount(account?: InjectedAccountWithMeta) {

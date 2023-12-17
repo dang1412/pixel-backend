@@ -14,13 +14,15 @@ export interface CharacterOptions {
   size?: number
   range?: number
   isEnemy?: boolean
+  // hp?: number
 }
 
 export class PixelCharacter {
   // character draw
   container = new Container()
   rangeDraw = new Graphics()
-  character = new Sprite()
+  characterDraw = new Sprite()
+  hpDraw = new Graphics()
 
   // 
   id: number
@@ -28,6 +30,9 @@ export class PixelCharacter {
   size: number
   range: number
   isEnemy: boolean
+
+  //
+  hp = 0
 
   selecting = false
 
@@ -40,6 +45,7 @@ export class PixelCharacter {
     this.size = options.size || 1
     this.range = options.range || 2
     this.isEnemy = options.isEnemy || false
+    // this.hp = options.hp || 3
 
     this.setup(imageUrl)
   }
@@ -60,7 +66,7 @@ export class PixelCharacter {
 
     // draw character
     const texture = await Texture.fromURL(imageUrl)
-    const character = this.character
+    const character = this.characterDraw
     character.texture = texture
     const ratio = Math.min(character.width / pixelSize, character.height / pixelSize)
     character.height = character.height / ratio
@@ -70,6 +76,11 @@ export class PixelCharacter {
     character.y = -(character.height - pixelSize) / 2
     // character.tint = 0xff0000
     this.container.addChild(character)
+
+    // draw HP
+    let bar = this.hpDraw
+    this.container.addChild(bar)
+    // this.updateHp(2)
 
     // container position
     scene.setImagePosition(this.container, this.x, this.y)
@@ -131,6 +142,16 @@ export class PixelCharacter {
 
     character.on('mousedown', controlstart)
     character.on('touchstart', controlstart)
+  }
+
+  updateHp(hp: number) {
+    this.hp = hp
+    const bar = this.hpDraw
+    bar.clear()
+    bar.beginFill(this.hp === 3 ? 'green' : this.hp === 2 ? 'yellow' : 'red')
+    // const character = this.characterDraw
+    bar.drawRect(0, 0- 5, this.adv.map.scene.options.pixelSize * this.hp / 3, 3)
+    bar.endFill()
   }
 
   isInRange(x: number, y: number): boolean {

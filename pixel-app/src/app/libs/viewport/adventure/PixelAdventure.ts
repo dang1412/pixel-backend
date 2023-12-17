@@ -2,6 +2,7 @@ import { sound } from '@pixi/sound'
 
 import { PixelMap } from '../PixelMap'
 import { CharacterOptions, PixelCharacter } from './PixelCharacter'
+import { AdventureUpdate } from 'adventure_engine'
 
 interface PixelAction {
   char: PixelCharacter
@@ -61,19 +62,39 @@ export class PixelAdventure {
     console.log('outputCtrl', opcode, beastId, pixel, type)
   }
 
-  initializeCharacters(characterPositions: [number, number][]) {
-    if (this.isInitialized) return
-    this.isInitialized = true
+  async updateMatch(updates: AdventureUpdate) {
+    const { moves, shoots, changedBeasts, changedBeastAttrs } = updates
+    // clear select before execute actions
+    this.map.scene.clearSelect()
+    await Promise.all(moves.map(m => this.move(m.beastId, m.pixel)))
+    await Promise.all(shoots.map(s => this.shoot(s.beastId, s.pixel)))
 
-    console.log('initializeCharacters', characterPositions)
-
-    const map = this.map.parentMap ? this.map.parentMap : this.map
-
-    for (let [id, pos] of characterPositions) {
-      const [x, y] = map.scene.getPixelXYFromIndex(pos)
-      this.addCharacter(x, y, { id, name: `puppy-${id}`, range: 4 }, '/images/axie.png')
-    }
+    changedBeasts.forEach((beastId, ind) => {
+      const beast = this.idCharacterMap.get(beastId)
+      if (beast) {
+        const health = changedBeastAttrs[ind].health
+        if (health) {
+          beast.updateHp(health)
+        } else {
+          this.kill(beastId)
+        }
+      }
+    })
   }
+
+  // initializeCharacters(characterPositions: [number, number][]) {
+  //   if (this.isInitialized) return
+  //   this.isInitialized = true
+
+  //   console.log('initializeCharacters', characterPositions)
+
+  //   const map = this.map.parentMap ? this.map.parentMap : this.map
+
+  //   for (let [id, pos] of characterPositions) {
+  //     const [x, y] = map.scene.getPixelXYFromIndex(pos)
+  //     this.addCharacter(x, y, { id, name: `puppy-${id}`, range: 4 }, '/images/axie.png')
+  //   }
+  // }
 
   async move(id: number, pixelId: number): Promise<void> {
     const char = this.idCharacterMap.get(id)
