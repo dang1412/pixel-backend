@@ -12,8 +12,16 @@ export function encodeMatchUpdate(updates: AdventureUpdate): Uint8Array {
   let builder = new Builder(1024)
 
   // const executedMoves: ActionInfo[], executedShoots: ActionInfo[], changedBeastIds: number[], changedBeastHps: number[]
-  const { moves: executedMoves, shoots: executedShoots, changedBeastAttrs, changedBeasts: changedBeastIds } = updates
-  const changedBeastHps = changedBeastAttrs.map(attrs => attrs.health)
+  const { 
+    moves: executedMoves,
+    shoots: executedShoots,
+    changedBeastHps,
+    changedBeasts: changedBeastIds,
+    changedBeastEquips,
+    changedPixels,
+    changedPixelItems
+  } = updates
+  // const changedBeastHps = changedBeastAttrs.map(attrs => attrs.health)
 
   // executedMoves
   UpdateState.startBeastMovesVector(builder, executedMoves.length)
@@ -32,12 +40,20 @@ export function encodeMatchUpdate(updates: AdventureUpdate): Uint8Array {
   // beast change
   const changeIds = UpdateState.createBeastChangeVector(builder, changedBeastIds)
   const changeHps = UpdateState.createBeastChangeHpVector(builder, changedBeastHps)
+  const changeEquips = UpdateState.createBeastChangeEquipsVector(builder, changedBeastEquips)
+
+  const changePixels = UpdateState.createPixelChangeVector(builder, changedPixels)
+  const changePixelItems = UpdateState.createPixelChangeItemsVector(builder, changedPixelItems)
 
   UpdateState.startUpdateState(builder)
   UpdateState.addBeastMoves(builder, moves)
   UpdateState.addBeastShoots(builder, shoots)
   UpdateState.addBeastChange(builder, changeIds)
   UpdateState.addBeastChangeHp(builder, changeHps)
+  UpdateState.addBeastChangeEquips(builder, changeEquips)
+
+  UpdateState.addPixelChange(builder, changePixels)
+  UpdateState.addPixelChangeItems(builder, changePixelItems)
 
   const end = UpdateState.endUpdateState(builder)
 
@@ -75,13 +91,20 @@ export function decodeMatchUpdate(data: Uint8Array): AdventureUpdate {
 
   const changedBeasts = Array.from(updateState.beastChangeArray() || [])
   const changedBeastHps = Array.from(updateState.beastChangeHpArray() || [])
-  const changedBeastAttrs = changedBeastHps.map(health => ({ health }))
+  // const changedBeastAttrs = changedBeastHps.map(health => ({ health }))
+  const changedBeastEquips = Array.from(updateState.beastChangeEquipsArray() || [])
+
+  const changedPixels = Array.from(updateState.pixelChangeArray() || [])
+  const changedPixelItems = Array.from(updateState.pixelChangeItemsArray() || [])
 
   // return [moves, shoots, changedBeastIds, changedBeastHps]
   return {
     moves,
     shoots,
     changedBeasts,
-    changedBeastAttrs
+    changedBeastHps,
+    changedBeastEquips,
+    changedPixels,
+    changedPixelItems
   }
 }

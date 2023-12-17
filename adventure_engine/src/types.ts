@@ -38,8 +38,13 @@ export interface BeastAttrs {
 export interface AdventureUpdate {
   moves: ActionInfo[]
   shoots: ActionInfo[]
+
   changedBeasts: number[]
-  changedBeastAttrs: BeastAttrs[]
+  changedBeastHps: number[]
+  changedBeastEquips: number[]
+
+  changedPixels: number[]
+  changedPixelItems: number[]
 }
 
 export interface AdventureState {
@@ -56,11 +61,13 @@ export interface AdventureState {
   weaponAttrsMap: { [id: number]: WeaponAttrs } // Map<number, WeaponAttrs>
 
   // pixel => array of (item, quantity)
-  pixelItemsMap: { [pixel: number]: [number, number][] }// Map<number, [number, number][]>
+  pixelWeaponsMap: { [pixel: number]: [number, number][] }// Map<number, [number, number][]>
 
   // pixel => vehicle
-  pixelVehicleMap: { [pixel: number]: number } // Map<number, number>
+  pixelItemMap: { [pixel: number]: number } // Map<number, number>
 
   // beast_id => array of equipped weapons (weapon id, quantity)
-  beastEquipmentsMap: { [id: number]: [number, number][] } // Map<number, [number, number][]>
+  beastEquipWeaponsMap: { [id: number]: [number, number][] } // Map<number, [number, number][]>
+
+  beastEquipItemMap: { [id: number]: number }
 }

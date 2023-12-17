@@ -40,13 +40,15 @@ export class AdventureEngine {
       weaponAttrsMap: {},
 
       // pixel => array of (item, quantity)
-      pixelItemsMap: {},
+      pixelItemMap: {},
 
       // pixel => vehicle
-      pixelVehicleMap: {},
+      pixelWeaponsMap: {},
 
       // beast_id => array of equipped weapons (weapon id, quantity)
-      beastEquipmentsMap: {}
+      beastEquipWeaponsMap: {},
+
+      beastEquipItemMap: {}
     }
 
     state.weaponAttrsMap[1] = { damage: 1, damageArea: {x: -1, y: -1, w: 3, h: 3} }
@@ -68,10 +70,10 @@ export class AdventureEngine {
     return [beastIds, hps]
   }
 
-  static onboardBeast(state: AdventureState, beastId: number, pixel: number, equipments: [number, number][], attrs?: BeastAttrs) {
+  static onboardBeast(state: AdventureState, beastId: number, pixel: number, weapons: [number, number][], attrs?: BeastAttrs) {
     // TODO load beast location, equipments, attributes on-chain
     AdventureEngine.executeMove(state, {beastId, pixel})
-    state.beastEquipmentsMap[beastId] = equipments
+    state.beastEquipWeaponsMap[beastId] = weapons
     state.beastAttrsMap[beastId] = attrs || { health: 3, moveRange: 4, shootRange: 4 }
   }
 
@@ -80,7 +82,10 @@ export class AdventureEngine {
       moves: [],
       shoots: [],
       changedBeasts: [],
-      changedBeastAttrs: []
+      changedBeastHps: [],
+      changedBeastEquips: [],
+      changedPixels: [],
+      changedPixelItems: [],
     }
 
     for (let move of moves) {
@@ -101,7 +106,7 @@ export class AdventureEngine {
       }
     }
 
-    // beasts that getting damages
+    // beasts that have updates (get damage or equips item)
     const changedBeastSet = new Set<number>()
 
     for (let shoot of shoots) {
@@ -115,10 +120,51 @@ export class AdventureEngine {
       }
     }
 
+    const changedPixels: number[] = []
+
+    // check if moved beasts equip item
+    for (const move of updates.moves) {
+      const beastId = AdventureEngine.tryEquips(state, move.pixel)
+      if (beastId >= 0) {
+        changedBeastSet.add(beastId)
+        changedPixels.push(move.pixel)
+      }
+    }
+
     updates.changedBeasts = Array.from(changedBeastSet)
-    updates.changedBeastAttrs = updates.changedBeasts.map(beastId => state.beastAttrsMap[beastId])
+    updates.changedBeastHps = updates.changedBeasts.map(beastId => state.beastAttrsMap[beastId].health)
+    updates.changedBeastEquips = updates.changedBeasts.map(beastId => state.beastEquipItemMap[beastId] || 0)
+
+    updates.changedPixels = changedPixels
+    updates.changedPixelItems = changedPixels.map(pixel => state.pixelItemMap[pixel] || 0)
 
     return updates
+  }
+
+  /**
+   * 
+   * @param state 
+   * @param pixel 
+   * @returns beastId if equips success
+   */
+  static tryEquips(state: AdventureState, pixel: number): number {
+    const beastId = state.pixelBeastMap[pixel]
+    if (beastId === undefined) { return -1 }
+
+    const item = state.pixelItemMap[pixel]
+    if (item === undefined) { return -1 }
+
+    // check if beast already equip
+    const equippedItem = state.beastEquipItemMap[beastId]
+    if (equippedItem >= 0) { return -1 }
+
+    // beast equips item
+    delete state.pixelItemMap[pixel]
+    state.beastEquipItemMap[beastId] = item
+
+    // TODO try equips weapons on the pixel
+
+    return beastId
   }
 
   // private checkBeastAlive(beastId: number, updateAttrs: Map<number, BeastAttrs>): boolean {
