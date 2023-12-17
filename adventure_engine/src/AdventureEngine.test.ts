@@ -23,8 +23,8 @@ describe('AdventureEngine', () => {
     AdventureEngine.onboardBeast(state, 1, 99, [])
     expect(state.beastPixelMap[1]).toBe(99)
 
-    const updates = AdventureEngine.proceedActions(state, [{ beastId: 1, pixel: 100 }], [])
-    expect(updates.moves).toEqual([{ beastId: 1, pixel: 100 }])
+    const updates = AdventureEngine.proceedActions(state, [{ beastId: 1, pixel: 99 }], [])
+    expect(updates.moves).toEqual([{ beastId: 1, pixel: 99 }])
   })
 
   test('getAllBeastPositions should work', () => {
@@ -46,11 +46,16 @@ describe('AdventureEngine', () => {
   })
 
   test('flatbuffer encode/decode should work', () => {
-    const updates: AdventureUpdate = { moves: [{ beastId: 1, pixel: 100 }, { beastId: 2, pixel: 120 }], shoots: [], changedBeasts: [1], changedBeastAttrs: [{health: 2}] }
+    const updates: AdventureUpdate = {
+      moves: [{ beastId: 1, pixel: 100, type: 10 }, { beastId: 2, pixel: 120, type: 100 }],
+      shoots: [{ beastId: 5, pixel: 200, type: 1 }],
+      changedBeasts: [1],
+      changedBeastAttrs: [{health: 2}]
+    }
     const encoded = encodeMatchUpdate(updates)
     const decoded = decodeMatchUpdate(encoded)
     console.log(decoded)
-    // sort the moves array
+    // sort the moves array by beastId
     decoded.moves.sort((a, b) => a.beastId - b.beastId)
     // compare
     expect(decoded).toEqual(updates)

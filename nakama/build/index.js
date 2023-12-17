@@ -53,13 +53,26 @@ var AdventureEngine = function () {
     });
     return positions;
   };
+  AdventureEngine.getAllBeastHps = function (state) {
+    var beastIds = Object.keys(state.beastAttrsMap).map(function (id) {
+      return Number(id);
+    });
+    var hps = beastIds.map(function (id) {
+      return state.beastAttrsMap[id].health || 3;
+    });
+    return [beastIds, hps];
+  };
   AdventureEngine.onboardBeast = function (state, beastId, pixel, equipments, attrs) {
     AdventureEngine.executeMove(state, {
       beastId: beastId,
       pixel: pixel
     });
     state.beastEquipmentsMap[beastId] = equipments;
-    state.beastAttrsMap[beastId] = attrs;
+    state.beastAttrsMap[beastId] = attrs || {
+      health: 3,
+      moveRange: 4,
+      shootRange: 4
+    };
   };
   AdventureEngine.proceedActions = function (state, moves, shoots) {
     var updates = {
@@ -175,27 +188,16 @@ var AdventureEngine = function () {
   return AdventureEngine;
 }();
 
-var BeastActionType;
-(function (BeastActionType) {
-  BeastActionType[BeastActionType["move"] = 0] = "move";
-  BeastActionType[BeastActionType["shoot"] = 1] = "shoot";
-})(BeastActionType || (BeastActionType = {}));
+var int32$1 = new Int32Array(2);
+new Float32Array(int32$1.buffer);
+new Float64Array(int32$1.buffer);
+new Uint16Array(new Uint8Array([1, 0]).buffer)[0] === 1;
 
-var SIZEOF_SHORT = 2;
-var SIZEOF_INT = 4;
-var FILE_IDENTIFIER_LENGTH = 4;
-var SIZE_PREFIX_LENGTH = 4;
-
-var int32 = new Int32Array(2);
-var float32 = new Float32Array(int32.buffer);
-var float64 = new Float64Array(int32.buffer);
-var isLittleEndian = new Uint16Array(new Uint8Array([1, 0]).buffer)[0] === 1;
-
-var Encoding;
+var Encoding$1;
 (function (Encoding) {
   Encoding[Encoding["UTF8_BYTES"] = 1] = "UTF8_BYTES";
   Encoding[Encoding["UTF16_STRING"] = 2] = "UTF16_STRING";
-})(Encoding || (Encoding = {}));
+})(Encoding$1 || (Encoding$1 = {}));
 
 function _classCallCheck(instance, Constructor) {
   if (!(instance instanceof Constructor)) {
@@ -233,6 +235,28 @@ function _toPropertyKey(arg) {
   var key = _toPrimitive(arg, "string");
   return typeof key === "symbol" ? key : String(key);
 }
+
+var BeastActionType;
+(function (BeastActionType) {
+  BeastActionType[BeastActionType["move"] = 0] = "move";
+  BeastActionType[BeastActionType["shoot"] = 1] = "shoot";
+})(BeastActionType || (BeastActionType = {}));
+
+var SIZEOF_SHORT = 2;
+var SIZEOF_INT = 4;
+var FILE_IDENTIFIER_LENGTH = 4;
+var SIZE_PREFIX_LENGTH = 4;
+
+var int32 = new Int32Array(2);
+var float32 = new Float32Array(int32.buffer);
+var float64 = new Float64Array(int32.buffer);
+var isLittleEndian = new Uint16Array(new Uint8Array([1, 0]).buffer)[0] === 1;
+
+var Encoding;
+(function (Encoding) {
+  Encoding[Encoding["UTF8_BYTES"] = 1] = "UTF8_BYTES";
+  Encoding[Encoding["UTF16_STRING"] = 2] = "UTF16_STRING";
+})(Encoding || (Encoding = {}));
 
 var ByteBuffer = /*#__PURE__*/function () {
   /**
@@ -1393,11 +1417,17 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
     logger.info('%q joined Adventure match', presence.userId);
   });
   var positions = AdventureEngine.getAllBeastPositions(state.adventure);
+  var hps = AdventureEngine.getAllBeastHps(state.adventure);
+  var changedBeastAttrs = hps[1].map(function (health) {
+    return {
+      health: health
+    };
+  });
   var data = encodeMatchUpdate({
     moves: positions,
     shoots: [],
-    changedBeasts: [],
-    changedBeastAttrs: []
+    changedBeasts: hps[0],
+    changedBeastAttrs: changedBeastAttrs
   });
   dispatcher.broadcastMessage(0, data.buffer.slice(data.byteOffset), presences, undefined, true);
   return {
@@ -1424,18 +1454,25 @@ function decodeAction(data) {
   };
 }
 function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
+  var _a;
   var moves = [];
   var shoots = [];
+  var onboardMoves = [];
   messages.forEach(function (message) {
     var beastAction = decodeAction(new Uint8Array(message.data));
     if (message.opCode === 0) {
       moves.push(beastAction);
-    } else {
+    } else if (message.opCode === 1) {
       shoots.push(beastAction);
+    } else if (message.opCode === 2) {
+      logger.info('Onboard beast %v', beastAction);
+      AdventureEngine.onboardBeast(state.adventure, beastAction.beastId, beastAction.pixel, []);
+      onboardMoves.push(beastAction);
     }
     logger.info('Received action %v', beastAction, message.opCode);
   });
   var updates = AdventureEngine.proceedActions(state.adventure, moves, shoots);
+  (_a = updates.moves).push.apply(_a, onboardMoves);
   if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length) {
     var data = encodeMatchUpdate(updates);
     dispatcher.broadcastMessage(1, data.buffer.slice(data.byteOffset));

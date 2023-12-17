@@ -10,7 +10,6 @@ interface MatchState {
   adventure: AdventureState
 }
 
-
 export function matchInit(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
@@ -62,8 +61,10 @@ export function matchJoin(
   })
   // const positions: BeastActionI[] = Object.keys(state.beastPosition).map(id => Number(id)).map(id => ({id, target: state.beastPosition[id]}))
   const positions = AdventureEngine.getAllBeastPositions(state.adventure)
+  const hps = AdventureEngine.getAllBeastHps(state.adventure)
+  const changedBeastAttrs = hps[1].map(health => ({ health }))
 
-  const data = encodeMatchUpdate({moves: positions, shoots: [], changedBeasts: [], changedBeastAttrs: []})
+  const data = encodeMatchUpdate({moves: positions, shoots: [], changedBeasts: hps[0], changedBeastAttrs })
 
   dispatcher.broadcastMessage(0, data.buffer.slice(data.byteOffset), presences, undefined, true)
 
@@ -234,6 +235,7 @@ export function matchLoop(
   // get move, shoot actions from messages
   const moves: ActionInfo[] = []
   const shoots: ActionInfo[] = []
+  const onboardMoves: ActionInfo[] = []
 
   messages.forEach((message) => {
       // const msg = JSON.parse(nk.binaryToString(message.data))
@@ -243,8 +245,12 @@ export function matchLoop(
       const beastAction = decodeAction(new Uint8Array(message.data))
       if (message.opCode === 0) {
         moves.push(beastAction)
-      } else {
+      } else if (message.opCode === 1) {
         shoots.push(beastAction)
+      } else if (message.opCode === 2) {
+        logger.info('Onboard beast %v', beastAction)
+        AdventureEngine.onboardBeast(state.adventure, beastAction.beastId, beastAction.pixel, [])
+        onboardMoves.push(beastAction)
       }
 
       logger.info('Received action %v', beastAction, message.opCode)
@@ -253,6 +259,7 @@ export function matchLoop(
   // update match states and get changes
   // const { executedMoves, executedShoots, beastGone } = matchUpdate(state, moves, shoots)
   const updates = AdventureEngine.proceedActions(state.adventure, moves, shoots)
+  updates.moves.push(...onboardMoves)
 
   if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length) {
     const data = encodeMatchUpdate(updates)

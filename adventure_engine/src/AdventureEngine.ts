@@ -61,11 +61,18 @@ export class AdventureEngine {
     return positions
   }
 
+  static getAllBeastHps(state: AdventureState): [number[], number[]] {
+    const beastIds = Object.keys(state.beastAttrsMap).map(id => Number(id))
+    const hps = beastIds.map(id => state.beastAttrsMap[id].health || 3)
+
+    return [beastIds, hps]
+  }
+
   static onboardBeast(state: AdventureState, beastId: number, pixel: number, equipments: [number, number][], attrs?: BeastAttrs) {
     // TODO load beast location, equipments, attributes on-chain
     AdventureEngine.executeMove(state, {beastId, pixel})
     state.beastEquipmentsMap[beastId] = equipments
-    state.beastAttrsMap[beastId] = attrs
+    state.beastAttrsMap[beastId] = attrs || { health: 3, moveRange: 4, shootRange: 4 }
   }
 
   static proceedActions(state: AdventureState, moves: ActionInfo[], shoots: ActionInfo[]): AdventureUpdate {

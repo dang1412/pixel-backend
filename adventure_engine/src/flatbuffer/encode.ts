@@ -60,7 +60,7 @@ export function decodeMatchUpdate(data: Uint8Array): AdventureUpdate {
   for (let i = 0; i < moveLen; i++) {
     const moveObj = updateState.beastMoves(i)
     if (moveObj) {
-      moves.push({ beastId: moveObj.id(), pixel: moveObj.target() })
+      moves.push({ beastId: moveObj.id(), pixel: moveObj.target(), type: moveObj.type() })
     }
   }
 
@@ -69,7 +69,7 @@ export function decodeMatchUpdate(data: Uint8Array): AdventureUpdate {
   for (let i = 0; i < shootLen; i++) {
     const shootObj = updateState.beastShoots(i)
     if (shootObj) {
-      shoots.push({ beastId: shootObj.id(), pixel: shootObj.target() })
+      shoots.push({ beastId: shootObj.id(), pixel: shootObj.target(), type: shootObj.type() })
     }
   }
 
