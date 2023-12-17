@@ -1,0 +1,16 @@
+/* #WrapFullscreen {
+  position: relative;
+} */
+
+.fullscreen .view-tools {
+  /* position: absolute; */
+  text-align: center;
+  background-color: white;
+}
+
+.close-select {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  cursor: pointer;
+}
