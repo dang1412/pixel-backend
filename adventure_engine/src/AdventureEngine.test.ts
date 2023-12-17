@@ -1,5 +1,7 @@
 import { describe, expect, test } from '@jest/globals'
 import { AdventureEngine } from './AdventureEngine'
+import { decodeMatchUpdate, encodeMatchUpdate } from './flatbuffer/encode'
+import { AdventureUpdate } from './types'
 
 describe('AdventureEngine', () => {
   test('initState state', () => {
@@ -41,5 +43,16 @@ describe('AdventureEngine', () => {
 
     const pos = AdventureEngine.getAllBeastPositions(state)
     expect(pos).toEqual([{ beastId: 1, pixel: 100 }, { beastId: 2, pixel: 120 }, { beastId: 3, pixel: 99 }])
+  })
+
+  test('flatbuffer encode/decode should work', () => {
+    const updates: AdventureUpdate = { moves: [{ beastId: 1, pixel: 100 }, { beastId: 2, pixel: 120 }], shoots: [], changedBeasts: [1], changedBeastAttrs: [{health: 2}] }
+    const encoded = encodeMatchUpdate(updates)
+    const decoded = decodeMatchUpdate(encoded)
+    console.log(decoded)
+    // sort the moves array
+    decoded.moves.sort((a, b) => a.beastId - b.beastId)
+    // compare
+    expect(decoded).toEqual(updates)
   })
 })

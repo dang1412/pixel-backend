@@ -2,7 +2,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { BeastAction } from './beast-action.js';
+import { BeastAction } from './beast-action';
 
 
 export class UpdateState {
