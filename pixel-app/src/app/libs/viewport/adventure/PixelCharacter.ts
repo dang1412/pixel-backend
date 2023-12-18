@@ -5,6 +5,7 @@ import { PixelMap } from '../PixelMap'
 import { PixelPoint } from '../types'
 import { EngineViewport } from '../EngineViewport'
 import { PixelAdventure } from '.'
+import { itemImages } from './constants'
 
 const energyTexture = Texture.fromURL('/images/energy2.png')
 
@@ -83,13 +84,7 @@ export class PixelCharacter {
 
     // draw equip
     const equipDraw = this.equipDraw
-    equipDraw.texture = await Texture.fromURL('images/bluelight.png')
-    equipDraw.width = pixelSize * 1.5
-    equipDraw.height = pixelSize * 1.5
-    equipDraw.x = equipDraw.y = pixelSize / 2
-    // equipDraw.x = -(equipDraw.width - pixelSize) / 2
-    // equipDraw.y = -(equipDraw.height - pixelSize) / 2
-    equipDraw.anchor.set(0.5, 0.5)
+    
     this.container.addChild(equipDraw)
 
     // draw HP
@@ -161,7 +156,7 @@ export class PixelCharacter {
     this.container.on('touchstart', controlstart)
   }
 
-  updateHp(hp: number) {
+  drawHp(hp: number) {
     this.hp = hp
     const bar = this.hpDraw
     bar.clear()
@@ -169,6 +164,18 @@ export class PixelCharacter {
     // const character = this.characterDraw
     bar.drawRect(0, 0- 5, this.adv.map.scene.options.pixelSize * this.hp / 3, 3)
     bar.endFill()
+  }
+
+  async drawEquip(id: number) {
+    const equipDraw = this.equipDraw
+    const pixelSize = this.adv.map.scene.options.pixelSize
+
+    const image = itemImages[id]
+    equipDraw.texture = image ? await Texture.fromURL(image) : Texture.EMPTY
+    equipDraw.width = pixelSize * 1.5
+    equipDraw.height = pixelSize * 1.5
+    equipDraw.x = equipDraw.y = pixelSize / 2
+    equipDraw.anchor.set(0.5, 0.5)
   }
 
   isInRange(x: number, y: number): boolean {

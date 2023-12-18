@@ -444,11 +444,18 @@ export class EngineViewport {
     canvas.addEventListener('drop', (e) => {
       const scene = this.getCurrentScene()
       if (!scene) return
-      const id = e.dataTransfer?.getData('id')
+
       const [x, y] = getXY(e)
       const [px, py] = scene.getViewportCoord(x, y)
-      console.log(id, px, py)
-      if (id) this.emit('dropbeast', Number(id), px, py)
+
+      const type = e.dataTransfer?.getData('type')
+      if (type === 'beast' || type === 'item') {
+        const id = e.dataTransfer?.getData('id')
+        console.log(`drop ${type}`, id, px, py)
+        if (id) {
+          this.emit(`drop${type}`, Number(id), px, py)
+        }
+      }
     })
 
     // prevent click event after dragging

@@ -20,6 +20,12 @@ const beastImages = [
   '/images/amu2.png',
 ]
 
+const itemIds = [1,2]
+const itemImages: { [id: number]: string } = {
+  1: '/images/bluelight.png',
+  2: '/images/aura.png'
+}
+
 interface Props {
   images?: PixelImage[]
   onInitAdventure: (adv: PixelAdventure) => void
@@ -116,6 +122,12 @@ export const ViewAdventure: React.FC<Props> = (props) => {
   // const adventure = adventureRef.current
   const dragStart = useCallback((e: React.DragEvent<HTMLImageElement>, t: number) => {
     const id = Math.floor(Math.random() * 1000000) + t * 1000000
+    e.dataTransfer.setData('type', `beast`)
+    e.dataTransfer.setData('id', `${id}`)
+  }, [])
+
+  const dragItem = useCallback((e: React.DragEvent<HTMLImageElement>, id: number) => {
+    e.dataTransfer.setData('type', `item`)
     e.dataTransfer.setData('id', `${id}`)
   }, [])
 
@@ -150,6 +162,8 @@ export const ViewAdventure: React.FC<Props> = (props) => {
         </>}
       />
       {beastImages.map((img, ind) => <img className='inline-block' key={ind} id={`axie-${ind}`} src={img} onDragStart={(e) => dragStart(e, ind)} width="100" height="100" />)}
+      <br/>
+      {itemIds.map((id, ind) => <img className='inline-block' key={ind} id={`item-${ind}`} src={itemImages[id]} onDragStart={(e) => dragItem(e, id)} width="60" height="60" />)}
     </div>
   )
 }

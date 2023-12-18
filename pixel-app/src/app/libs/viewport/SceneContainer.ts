@@ -185,7 +185,7 @@ export class SceneContainer {
    * @returns 
    */
   async addImageURL(area: PixelArea, imageURL: string, layer = 'image') : Promise<Sprite>{
-    const texture = await Texture.fromURL(imageURL)
+    const texture = imageURL ? await Texture.fromURL(imageURL) : Texture.EMPTY
     return this.addLayerAreaTexture(area, texture, layer)
   }
 

@@ -2,22 +2,14 @@ import { sound } from '@pixi/sound'
 
 import { PixelMap } from '../PixelMap'
 import { CharacterOptions, PixelCharacter } from './PixelCharacter'
-import { AdventureUpdate } from 'adventure_engine'
+import { AdventureUpdate, getPixelXYFromIndex } from 'adventure_engine'
+import { WORLD_WIDTH } from '../constants'
+import { beastImageMap, itemImages } from './constants'
 
 interface PixelAction {
   char: PixelCharacter
   targetIndex: number
   type: 0 | 1
-}
-
-const typeImageMap: {[type: number]: string} = {
-  0: '/images/axie.png',
-  1: '/images/axie2.png',
-  2: '/images/axie3.png',
-  3: '/images/axie4.png',
-  4: '/images/ghost.png',
-  5: '/images/amu1.png',
-  6: '/images/amu2.png',
 }
 
 export class PixelAdventure {
@@ -54,8 +46,20 @@ export class PixelAdventure {
       this.outputCtrl(2, id, pixel)
     })
 
+    engine.on('dropitem', (id: number, px: number, py: number) => {
+      const pixel = this.map.scene.getPixelIndex(px, py)
+      this.outputCtrl(99, id, pixel)
+    })
+
     sound.add('move', '/sounds/whistle.mp3')
     sound.add('shoot', '/sounds/sword.mp3')
+  }
+
+  drawItemOnMap(id: number, pixel: number) {
+    const imageUrl = itemImages[id]
+    // will be empty if imageUrl is undefined
+    const [x, y] = getPixelXYFromIndex(pixel, WORLD_WIDTH)
+    this.map.scene.addImageURL({x, y, w:1, h:1}, imageUrl, 'items')
   }
 
   /**
@@ -74,7 +78,7 @@ export class PixelAdventure {
   }
 
   async updateMatch(updates: AdventureUpdate) {
-    const { moves, shoots, changedBeasts, changedBeastAttrs } = updates
+    const { moves, shoots, changedBeasts, changedBeastHps, changedBeastEquips, changedPixels, changedPixelItems } = updates
     // clear select before execute actions
     this.map.scene.clearSelect()
     await Promise.all(moves.map(m => this.move(m.beastId, m.pixel)))
@@ -83,14 +87,24 @@ export class PixelAdventure {
     changedBeasts.forEach((beastId, ind) => {
       const beast = this.idCharacterMap.get(beastId)
       if (beast) {
-        const health = changedBeastAttrs[ind].health
+        const health: number = changedBeastHps[ind]
+        const equippedItem = changedBeastEquips[ind]
         if (health) {
-          beast.updateHp(health)
+          beast.drawHp(health)
+          beast.drawEquip(equippedItem)
         } else {
           this.kill(beastId)
         }
       }
     })
+
+    // update items on map
+    for (let i = 0; i < changedPixels.length; i ++) {
+      const pixel = changedPixels[i]
+      const item = changedPixelItems[i]
+      this.drawItemOnMap(item, pixel)
+    }
+
   }
 
   // initializeCharacters(characterPositions: [number, number][]) {
@@ -175,7 +189,7 @@ export class PixelAdventure {
   async addCharacter(x: number, y: number, opts: CharacterOptions, imageUrl?: string) {
     const id = opts.id
     const type = Math.floor(id / 1000000)
-    const character = new PixelCharacter(this, x, y, opts, typeImageMap[type] || imageUrl)
+    const character = new PixelCharacter(this, x, y, opts, beastImageMap[type] || imageUrl)
     const index = this.map.scene.getPixelIndex(x, y)
     this.pixelCharacterMap.set(index, character)
     this.idCharacterMap.set(opts.id, character)
