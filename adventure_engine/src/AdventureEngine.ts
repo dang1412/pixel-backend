@@ -63,11 +63,24 @@ export class AdventureEngine {
     return positions
   }
 
-  static getAllBeastHps(state: AdventureState): [number[], number[]] {
+  static getAllBeastProps(state: AdventureState): [number[], number[], number[]] {
+    // beast ids
     const beastIds = Object.keys(state.beastAttrsMap).map(id => Number(id))
+    // hps
     const hps = beastIds.map(id => state.beastAttrsMap[id].health || 3)
+    // equipped items
+    const items = beastIds.map(id => state.beastEquipItemMap[id] || 0)
 
-    return [beastIds, hps]
+    return [beastIds, hps, items]
+  }
+
+  static getAllPixelItems(state: AdventureState): [number[], number[]] {
+    // pixel which has item on it
+    const pixels = Object.keys(state.pixelItemMap).map(id => Number(id))
+    // item on pixel
+    const items = pixels.map(pixel => state.pixelItemMap[pixel] || 0)
+
+    return [pixels, items]
   }
 
   static onboardBeast(state: AdventureState, beastId: number, pixel: number, weapons: [number, number][], attrs?: BeastAttrs) {
@@ -75,6 +88,18 @@ export class AdventureEngine {
     AdventureEngine.executeMove(state, {beastId, pixel})
     state.beastEquipWeaponsMap[beastId] = weapons
     state.beastAttrsMap[beastId] = attrs || { health: 3, moveRange: 4, shootRange: 4 }
+  }
+
+  static dropItemOnMap(state: AdventureState, itemId: number, pixel: number): boolean {
+    // check if current item on pixel
+    const currentItem = state.pixelItemMap[pixel]
+    if (currentItem >= 0) {
+      return false
+    }
+
+    state.pixelItemMap[pixel] = itemId
+
+    return true
   }
 
   static proceedActions(state: AdventureState, moves: ActionInfo[], shoots: ActionInfo[]): AdventureUpdate {

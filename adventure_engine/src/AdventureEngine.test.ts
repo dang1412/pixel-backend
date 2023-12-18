@@ -63,4 +63,56 @@ describe('AdventureEngine', () => {
     // compare
     expect(decoded).toEqual(updates)
   })
+
+  test('dropItemOnMap should work', () => {
+    const state = AdventureEngine.initState()
+
+    // drop item at pixel 100
+    AdventureEngine.dropItemOnMap(state, 1, 100)
+
+    expect(state.pixelItemMap[100]).toBe(1)
+  })
+
+  test('getAllPixelItems should work', () => {
+    const state = AdventureEngine.initState()
+
+    // drop items on map
+    AdventureEngine.dropItemOnMap(state, 1, 100)
+    AdventureEngine.dropItemOnMap(state, 5, 200)
+    const isDropped = AdventureEngine.dropItemOnMap(state, 6, 200)
+
+    expect(state.pixelItemMap[100]).toBe(1)
+    expect(state.pixelItemMap[200]).toBe(5)
+    expect(isDropped).toBe(false)
+
+    const [pixels, items] = AdventureEngine.getAllPixelItems(state)
+
+    expect(pixels).toEqual([100, 200])
+    expect(items).toEqual([1, 5])
+  })
+
+  test('Move and take item on map', () => {
+    const state = AdventureEngine.initState()
+
+    // onboard beast 1 at pixel 99
+    AdventureEngine.onboardBeast(state, 1, 120, [])
+    // beast 2 at pixel 102
+    AdventureEngine.onboardBeast(state, 2, 124, [])
+
+    // drop item 1 at pixel 100
+    AdventureEngine.dropItemOnMap(state, 1, 122)
+
+    // beast move to pixel 100, to take the item on map
+    const updates = AdventureEngine.proceedActions(state, [{beastId: 1, pixel: 122}], [{beastId:2, pixel: 122}])
+    const expectRs: AdventureUpdate = {
+      moves: [{beastId: 1, pixel: 122}],
+      shoots: [{beastId:2, pixel: 122}],
+      changedBeasts: [1], // beast 1 has updates
+      changedBeastHps: [2], // beast 1 HP reduce 1 (3 -> 2)
+      changedBeastEquips: [1],  // beast 1 equips item 1
+      changedPixels: [122], // pixel 122 has updates
+      changedPixelItems: [0]  // item on pixel 122 disapear (taken by beast 1)
+    }
+    expect(updates).toEqual(expectRs)
+  })
 })
