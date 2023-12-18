@@ -27,9 +27,10 @@ var AdventureEngine = function () {
       pixelBeastMap: {},
       beastOnMap: [],
       weaponAttrsMap: {},
-      pixelItemsMap: {},
-      pixelVehicleMap: {},
-      beastEquipmentsMap: {}
+      pixelItemMap: {},
+      pixelWeaponsMap: {},
+      beastEquipWeaponsMap: {},
+      beastEquipItemMap: {}
     };
     state.weaponAttrsMap[1] = {
       damage: 1,
@@ -53,33 +54,56 @@ var AdventureEngine = function () {
     });
     return positions;
   };
-  AdventureEngine.getAllBeastHps = function (state) {
+  AdventureEngine.getAllBeastProps = function (state) {
     var beastIds = Object.keys(state.beastAttrsMap).map(function (id) {
       return Number(id);
     });
     var hps = beastIds.map(function (id) {
       return state.beastAttrsMap[id].health || 3;
     });
-    return [beastIds, hps];
+    var items = beastIds.map(function (id) {
+      return state.beastEquipItemMap[id] || 0;
+    });
+    return [beastIds, hps, items];
   };
-  AdventureEngine.onboardBeast = function (state, beastId, pixel, equipments, attrs) {
+  AdventureEngine.getAllPixelItems = function (state) {
+    var pixels = Object.keys(state.pixelItemMap).map(function (id) {
+      return Number(id);
+    });
+    var items = pixels.map(function (pixel) {
+      return state.pixelItemMap[pixel] || 0;
+    });
+    return [pixels, items];
+  };
+  AdventureEngine.onboardBeast = function (state, beastId, pixel, weapons, attrs) {
     AdventureEngine.executeMove(state, {
       beastId: beastId,
       pixel: pixel
     });
-    state.beastEquipmentsMap[beastId] = equipments;
+    state.beastEquipWeaponsMap[beastId] = weapons;
     state.beastAttrsMap[beastId] = attrs || {
       health: 3,
       moveRange: 4,
       shootRange: 4
     };
   };
+  AdventureEngine.dropItemOnMap = function (state, itemId, pixel) {
+    var currentItem = state.pixelItemMap[pixel];
+    if (currentItem >= 0) {
+      return false;
+    }
+    state.pixelItemMap[pixel] = itemId;
+    return true;
+  };
   AdventureEngine.proceedActions = function (state, moves, shoots) {
     var updates = {
       moves: [],
       shoots: [],
       changedBeasts: [],
-      changedBeastAttrs: []
+      changedBeastHps: [],
+      changedBeastEquips: [],
+      changedPixels: [],
+      changedPixelItems: []
     };
     for (var _i = 0, moves_1 = moves; _i < moves_1.length; _i++) {
       var move = moves_1[_i];
@@ -105,11 +129,44 @@ var AdventureEngine = function () {
         updates.shoots.push(shoot);
       }
     }
+    var changedPixels = [];
+    for (var _b = 0, _c = updates.moves; _b < _c.length; _b++) {
+      var move = _c[_b];
+      var beastId = AdventureEngine.tryEquips(state, move.pixel);
+      if (beastId >= 0) {
+        changedBeastSet.add(beastId);
+        changedPixels.push(move.pixel);
+      }
+    }
     updates.changedBeasts = Array.from(changedBeastSet);
-    updates.changedBeastAttrs = updates.changedBeasts.map(function (beastId) {
-      return state.beastAttrsMap[beastId];
+    updates.changedBeastHps = updates.changedBeasts.map(function (beastId) {
+      return state.beastAttrsMap[beastId].health;
+    });
+    updates.changedBeastEquips = updates.changedBeasts.map(function (beastId) {
+      return state.beastEquipItemMap[beastId] || 0;
+    });
+    updates.changedPixels = changedPixels;
+    updates.changedPixelItems = changedPixels.map(function (pixel) {
+      return state.pixelItemMap[pixel] || 0;
     });
     return updates;
+  };
+  AdventureEngine.tryEquips = function (state, pixel) {
+    var beastId = state.pixelBeastMap[pixel];
+    if (beastId === undefined) {
+      return -1;
+    }
+    var item = state.pixelItemMap[pixel];
+    if (item === undefined) {
+      return -1;
+    }
+    var equippedItem = state.beastEquipItemMap[beastId];
+    if (equippedItem >= 0) {
+      return -1;
+    }
+    delete state.pixelItemMap[pixel];
+    state.beastEquipItemMap[beastId] = item;
+    return beastId;
   };
   AdventureEngine.executeMove = function (state, move) {
     var beastId = move.beastId,
@@ -188,17 +245,36 @@ var AdventureEngine = function () {
   return AdventureEngine;
 }();
 
-var int32$1 = new Int32Array(2);
-new Float32Array(int32$1.buffer);
-new Float64Array(int32$1.buffer);
-new Uint16Array(new Uint8Array([1, 0]).buffer)[0] === 1;
+var SIZEOF_SHORT = 2;
+var SIZEOF_INT = 4;
+var FILE_IDENTIFIER_LENGTH = 4;
+var SIZE_PREFIX_LENGTH = 4;
 
-var Encoding$1;
+var int32 = new Int32Array(2);
+var float32 = new Float32Array(int32.buffer);
+var float64 = new Float64Array(int32.buffer);
+var isLittleEndian = new Uint16Array(new Uint8Array([1, 0]).buffer)[0] === 1;
+
+var Encoding;
 (function (Encoding) {
   Encoding[Encoding["UTF8_BYTES"] = 1] = "UTF8_BYTES";
   Encoding[Encoding["UTF16_STRING"] = 2] = "UTF16_STRING";
-})(Encoding$1 || (Encoding$1 = {}));
+})(Encoding || (Encoding = {}));
 
+function _toPrimitive(t, r) {
+  if ("object" != typeof t || !t) return t;
+  var e = t[Symbol.toPrimitive];
+  if (void 0 !== e) {
+    var i = e.call(t, r || "default");
+    if ("object" != typeof i) return i;
+    throw new TypeError("@@toPrimitive must return a primitive value.");
+  }
+  return ("string" === r ? String : Number)(t);
+}
+function _toPropertyKey(t) {
+  var i = _toPrimitive(t, "string");
+  return "symbol" == typeof i ? i : String(i);
+}
 function _classCallCheck(instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new TypeError("Cannot call a class as a function");
@@ -221,42 +297,6 @@ function _createClass(Constructor, protoProps, staticProps) {
   });
   return Constructor;
 }
-function _toPrimitive(input, hint) {
-  if (typeof input !== "object" || input === null) return input;
-  var prim = input[Symbol.toPrimitive];
-  if (prim !== undefined) {
-    var res = prim.call(input, hint || "default");
-    if (typeof res !== "object") return res;
-    throw new TypeError("@@toPrimitive must return a primitive value.");
-  }
-  return (hint === "string" ? String : Number)(input);
-}
-function _toPropertyKey(arg) {
-  var key = _toPrimitive(arg, "string");
-  return typeof key === "symbol" ? key : String(key);
-}
-
-var BeastActionType;
-(function (BeastActionType) {
-  BeastActionType[BeastActionType["move"] = 0] = "move";
-  BeastActionType[BeastActionType["shoot"] = 1] = "shoot";
-})(BeastActionType || (BeastActionType = {}));
-
-var SIZEOF_SHORT = 2;
-var SIZEOF_INT = 4;
-var FILE_IDENTIFIER_LENGTH = 4;
-var SIZE_PREFIX_LENGTH = 4;
-
-var int32 = new Int32Array(2);
-var float32 = new Float32Array(int32.buffer);
-var float64 = new Float64Array(int32.buffer);
-var isLittleEndian = new Uint16Array(new Uint8Array([1, 0]).buffer)[0] === 1;
-
-var Encoding;
-(function (Encoding) {
-  Encoding[Encoding["UTF8_BYTES"] = 1] = "UTF8_BYTES";
-  Encoding[Encoding["UTF16_STRING"] = 2] = "UTF16_STRING";
-})(Encoding || (Encoding = {}));
 
 var ByteBuffer = /*#__PURE__*/function () {
   /**
@@ -928,7 +968,6 @@ var Builder = /*#__PURE__*/function () {
       for (var i = 0; i < numfields; i++) {
         this.vtable[i] = 0; // This will push additional elements as needed
       }
-
       this.isNested = true;
       this.object_start = this.offset();
     }
@@ -1268,8 +1307,44 @@ var UpdateState = function () {
     var offset = this.bb.__offset(this.bb_pos, 10);
     return offset ? new Int16Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + offset), this.bb.__vector_len(this.bb_pos + offset)) : null;
   };
+  UpdateState.prototype.beastChangeEquips = function (index) {
+    var offset = this.bb.__offset(this.bb_pos, 12);
+    return offset ? this.bb.readInt16(this.bb.__vector(this.bb_pos + offset) + index * 2) : 0;
+  };
+  UpdateState.prototype.beastChangeEquipsLength = function () {
+    var offset = this.bb.__offset(this.bb_pos, 12);
+    return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
+  };
+  UpdateState.prototype.beastChangeEquipsArray = function () {
+    var offset = this.bb.__offset(this.bb_pos, 12);
+    return offset ? new Int16Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + offset), this.bb.__vector_len(this.bb_pos + offset)) : null;
+  };
+  UpdateState.prototype.pixelChange = function (index) {
+    var offset = this.bb.__offset(this.bb_pos, 14);
+    return offset ? this.bb.readInt32(this.bb.__vector(this.bb_pos + offset) + index * 4) : 0;
+  };
+  UpdateState.prototype.pixelChangeLength = function () {
+    var offset = this.bb.__offset(this.bb_pos, 14);
+    return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
+  };
+  UpdateState.prototype.pixelChangeArray = function () {
+    var offset = this.bb.__offset(this.bb_pos, 14);
+    return offset ? new Int32Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + offset), this.bb.__vector_len(this.bb_pos + offset)) : null;
+  };
+  UpdateState.prototype.pixelChangeItems = function (index) {
+    var offset = this.bb.__offset(this.bb_pos, 16);
+    return offset ? this.bb.readInt16(this.bb.__vector(this.bb_pos + offset) + index * 2) : 0;
+  };
+  UpdateState.prototype.pixelChangeItemsLength = function () {
+    var offset = this.bb.__offset(this.bb_pos, 16);
+    return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
+  };
+  UpdateState.prototype.pixelChangeItemsArray = function () {
+    var offset = this.bb.__offset(this.bb_pos, 16);
+    return offset ? new Int16Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + offset), this.bb.__vector_len(this.bb_pos + offset)) : null;
+  };
   UpdateState.startUpdateState = function (builder) {
-    builder.startObject(4);
+    builder.startObject(7);
   };
   UpdateState.addBeastMoves = function (builder, beastMovesOffset) {
     builder.addFieldOffset(0, beastMovesOffset, 0);
@@ -1309,6 +1384,45 @@ var UpdateState = function () {
   UpdateState.startBeastChangeHpVector = function (builder, numElems) {
     builder.startVector(2, numElems, 2);
   };
+  UpdateState.addBeastChangeEquips = function (builder, beastChangeEquipsOffset) {
+    builder.addFieldOffset(4, beastChangeEquipsOffset, 0);
+  };
+  UpdateState.createBeastChangeEquipsVector = function (builder, data) {
+    builder.startVector(2, data.length, 2);
+    for (var i = data.length - 1; i >= 0; i--) {
+      builder.addInt16(data[i]);
+    }
+    return builder.endVector();
+  };
+  UpdateState.startBeastChangeEquipsVector = function (builder, numElems) {
+    builder.startVector(2, numElems, 2);
+  };
+  UpdateState.addPixelChange = function (builder, pixelChangeOffset) {
+    builder.addFieldOffset(5, pixelChangeOffset, 0);
+  };
+  UpdateState.createPixelChangeVector = function (builder, data) {
+    builder.startVector(4, data.length, 4);
+    for (var i = data.length - 1; i >= 0; i--) {
+      builder.addInt32(data[i]);
+    }
+    return builder.endVector();
+  };
+  UpdateState.startPixelChangeVector = function (builder, numElems) {
+    builder.startVector(4, numElems, 4);
+  };
+  UpdateState.addPixelChangeItems = function (builder, pixelChangeItemsOffset) {
+    builder.addFieldOffset(6, pixelChangeItemsOffset, 0);
+  };
+  UpdateState.createPixelChangeItemsVector = function (builder, data) {
+    builder.startVector(2, data.length, 2);
+    for (var i = data.length - 1; i >= 0; i--) {
+      builder.addInt16(data[i]);
+    }
+    return builder.endVector();
+  };
+  UpdateState.startPixelChangeItemsVector = function (builder, numElems) {
+    builder.startVector(2, numElems, 2);
+  };
   UpdateState.endUpdateState = function (builder) {
     var offset = builder.endObject();
     return offset;
@@ -1319,16 +1433,64 @@ var UpdateState = function () {
   UpdateState.finishSizePrefixedUpdateStateBuffer = function (builder, offset) {
     builder.finish(offset, undefined, true);
   };
-  UpdateState.createUpdateState = function (builder, beastMovesOffset, beastShootsOffset, beastChangeOffset, beastChangeHpOffset) {
+  UpdateState.createUpdateState = function (builder, beastMovesOffset, beastShootsOffset, beastChangeOffset, beastChangeHpOffset, beastChangeEquipsOffset, pixelChangeOffset, pixelChangeItemsOffset) {
     UpdateState.startUpdateState(builder);
     UpdateState.addBeastMoves(builder, beastMovesOffset);
     UpdateState.addBeastShoots(builder, beastShootsOffset);
     UpdateState.addBeastChange(builder, beastChangeOffset);
     UpdateState.addBeastChangeHp(builder, beastChangeHpOffset);
+    UpdateState.addBeastChangeEquips(builder, beastChangeEquipsOffset);
+    UpdateState.addPixelChange(builder, pixelChangeOffset);
+    UpdateState.addPixelChangeItems(builder, pixelChangeItemsOffset);
     return UpdateState.endUpdateState(builder);
   };
   return UpdateState;
 }();
+
+function encodeMatchUpdate(updates) {
+  var builder = new Builder(1024);
+  var executedMoves = updates.moves,
+    executedShoots = updates.shoots,
+    changedBeastHps = updates.changedBeastHps,
+    changedBeastIds = updates.changedBeasts,
+    changedBeastEquips = updates.changedBeastEquips,
+    changedPixels = updates.changedPixels,
+    changedPixelItems = updates.changedPixelItems;
+  UpdateState.startBeastMovesVector(builder, executedMoves.length);
+  for (var _i = 0, executedMoves_1 = executedMoves; _i < executedMoves_1.length; _i++) {
+    var move = executedMoves_1[_i];
+    BeastAction.createBeastAction(builder, move.beastId, move.pixel, move.type);
+  }
+  var moves = builder.endVector();
+  UpdateState.startBeastShootsVector(builder, executedShoots.length);
+  for (var _a = 0, executedShoots_1 = executedShoots; _a < executedShoots_1.length; _a++) {
+    var shoot = executedShoots_1[_a];
+    BeastAction.createBeastAction(builder, shoot.beastId, shoot.pixel, shoot.type);
+  }
+  var shoots = builder.endVector();
+  var changeIds = UpdateState.createBeastChangeVector(builder, changedBeastIds);
+  var changeHps = UpdateState.createBeastChangeHpVector(builder, changedBeastHps);
+  var changeEquips = UpdateState.createBeastChangeEquipsVector(builder, changedBeastEquips);
+  var changePixels = UpdateState.createPixelChangeVector(builder, changedPixels);
+  var changePixelItems = UpdateState.createPixelChangeItemsVector(builder, changedPixelItems);
+  UpdateState.startUpdateState(builder);
+  UpdateState.addBeastMoves(builder, moves);
+  UpdateState.addBeastShoots(builder, shoots);
+  UpdateState.addBeastChange(builder, changeIds);
+  UpdateState.addBeastChangeHp(builder, changeHps);
+  UpdateState.addBeastChangeEquips(builder, changeEquips);
+  UpdateState.addPixelChange(builder, changePixels);
+  UpdateState.addPixelChangeItems(builder, changePixelItems);
+  var end = UpdateState.endUpdateState(builder);
+  builder.finish(end);
+  return builder.asUint8Array();
+}
+
+var BeastActionType;
+(function (BeastActionType) {
+  BeastActionType[BeastActionType["move"] = 0] = "move";
+  BeastActionType[BeastActionType["shoot"] = 1] = "shoot";
+})(BeastActionType || (BeastActionType = {}));
 
 var TextEncoder = function () {
   function TextEncoder() {}
@@ -1358,38 +1520,6 @@ var TextDecoder = function () {
   };
   return TextDecoder;
 }();
-function encodeMatchUpdate(updates) {
-  var builder = new Builder(128);
-  var executedMoves = updates.moves,
-    executedShoots = updates.shoots,
-    changedBeastAttrs = updates.changedBeastAttrs,
-    changedBeastIds = updates.changedBeasts;
-  var changedBeastHps = changedBeastAttrs.map(function (attrs) {
-    return attrs.health;
-  });
-  UpdateState.startBeastMovesVector(builder, executedMoves.length);
-  for (var _i = 0, executedMoves_1 = executedMoves; _i < executedMoves_1.length; _i++) {
-    var move = executedMoves_1[_i];
-    BeastAction.createBeastAction(builder, move.beastId, move.pixel, move.type);
-  }
-  var moves = builder.endVector();
-  UpdateState.startBeastShootsVector(builder, executedShoots.length);
-  for (var _a = 0, executedShoots_1 = executedShoots; _a < executedShoots_1.length; _a++) {
-    var shoot = executedShoots_1[_a];
-    BeastAction.createBeastAction(builder, shoot.beastId, shoot.pixel, shoot.type);
-  }
-  var shoots = builder.endVector();
-  var changeIds = UpdateState.createBeastChangeVector(builder, changedBeastIds);
-  var changeHps = UpdateState.createBeastChangeHpVector(builder, changedBeastHps);
-  UpdateState.startUpdateState(builder);
-  UpdateState.addBeastMoves(builder, moves);
-  UpdateState.addBeastShoots(builder, shoots);
-  UpdateState.addBeastChange(builder, changeIds);
-  UpdateState.addBeastChangeHp(builder, changeHps);
-  var end = UpdateState.endUpdateState(builder);
-  builder.finish(end);
-  return builder.asUint8Array();
-}
 
 function matchInit(ctx, logger, nk, params) {
   logger.debug('Adventure match created');
@@ -1417,17 +1547,18 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
     logger.info('%q joined Adventure match', presence.userId);
   });
   var positions = AdventureEngine.getAllBeastPositions(state.adventure);
-  var hps = AdventureEngine.getAllBeastHps(state.adventure);
-  var changedBeastAttrs = hps[1].map(function (health) {
-    return {
-      health: health
-    };
-  });
+  var props = AdventureEngine.getAllBeastProps(state.adventure);
+  var _a = AdventureEngine.getAllPixelItems(state.adventure),
+    pixels = _a[0],
+    items = _a[1];
   var data = encodeMatchUpdate({
     moves: positions,
     shoots: [],
-    changedBeasts: hps[0],
-    changedBeastAttrs: changedBeastAttrs
+    changedBeasts: props[0],
+    changedBeastHps: props[1],
+    changedBeastEquips: props[2],
+    changedPixels: pixels,
+    changedPixelItems: items
   });
   dispatcher.broadcastMessage(0, data.buffer.slice(data.byteOffset), presences, undefined, true);
   return {
@@ -1458,6 +1589,7 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
   var moves = [];
   var shoots = [];
   var onboardMoves = [];
+  var dropItems = [];
   messages.forEach(function (message) {
     var beastAction = decodeAction(new Uint8Array(message.data));
     if (message.opCode === 0) {
@@ -1468,12 +1600,25 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
       logger.info('Onboard beast %v', beastAction);
       AdventureEngine.onboardBeast(state.adventure, beastAction.beastId, beastAction.pixel, []);
       onboardMoves.push(beastAction);
+    } else if (message.opCode === 99) {
+      logger.info('Drop item %v', beastAction);
+      dropItems.push(beastAction);
     }
     logger.info('Received action %v', beastAction, message.opCode);
   });
   var updates = AdventureEngine.proceedActions(state.adventure, moves, shoots);
   (_a = updates.moves).push.apply(_a, onboardMoves);
-  if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length) {
+  for (var _i = 0, dropItems_1 = dropItems; _i < dropItems_1.length; _i++) {
+    var action = dropItems_1[_i];
+    var itemId = action.beastId,
+      pixel = action.pixel;
+    var isDropped = AdventureEngine.dropItemOnMap(state.adventure, itemId, pixel);
+    if (isDropped) {
+      updates.changedPixels.push(pixel);
+      updates.changedPixelItems.push(itemId);
+    }
+  }
+  if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length || updates.changedPixels.length) {
     var data = encodeMatchUpdate(updates);
     dispatcher.broadcastMessage(1, data.buffer.slice(data.byteOffset));
   }

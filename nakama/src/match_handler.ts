@@ -1,8 +1,8 @@
 // import { TextEncoder, TextDecoder } from './encode.js'
 // import * as flatbuffers from 'flatbuffers'
-import { ActionInfo, AdventureEngine, AdventureState } from 'adventure_engine'
+import { ActionInfo, AdventureEngine, AdventureState, encodeMatchUpdate } from 'adventure_engine'
 
-import { TextEncoder, TextDecoder, encodeMatchUpdate } from './encode'
+import { TextEncoder, TextDecoder } from './encode'
 // import { UpdateState, BeastAction } from './flatbuffer/match-update'
 
 interface MatchState {
@@ -61,10 +61,19 @@ export function matchJoin(
   })
   // const positions: BeastActionI[] = Object.keys(state.beastPosition).map(id => Number(id)).map(id => ({id, target: state.beastPosition[id]}))
   const positions = AdventureEngine.getAllBeastPositions(state.adventure)
-  const hps = AdventureEngine.getAllBeastHps(state.adventure)
-  const changedBeastAttrs = hps[1].map(health => ({ health }))
+  const props = AdventureEngine.getAllBeastProps(state.adventure)
+  const [pixels, items] = AdventureEngine.getAllPixelItems(state.adventure)
+  // const changedBeastAttrs = hps[1].map(health => ({ health }))
 
-  const data = encodeMatchUpdate({moves: positions, shoots: [], changedBeasts: hps[0], changedBeastAttrs })
+  const data = encodeMatchUpdate({
+    moves: positions,
+    shoots: [],
+    changedBeasts: props[0],
+    changedBeastHps: props[1],
+    changedBeastEquips: props[2],
+    changedPixels: pixels,
+    changedPixelItems: items,
+  })
 
   dispatcher.broadcastMessage(0, data.buffer.slice(data.byteOffset), presences, undefined, true)
 
@@ -237,6 +246,8 @@ export function matchLoop(
   const shoots: ActionInfo[] = []
   const onboardMoves: ActionInfo[] = []
 
+  const dropItems: ActionInfo[] = []
+
   messages.forEach((message) => {
       // const msg = JSON.parse(nk.binaryToString(message.data))
       // logger.info(msg)
@@ -249,8 +260,13 @@ export function matchLoop(
         shoots.push(beastAction)
       } else if (message.opCode === 2) {
         logger.info('Onboard beast %v', beastAction)
+        // TODO check if onboard beast success
         AdventureEngine.onboardBeast(state.adventure, beastAction.beastId, beastAction.pixel, [])
         onboardMoves.push(beastAction)
+      } else if (message.opCode === 99) {
+        logger.info('Drop item %v', beastAction)
+        // const isDropped = AdventureEngine.dropItemOnMap(state.adventure, beastAction.beastId, beastAction.pixel)
+        dropItems.push(beastAction)
       }
 
       logger.info('Received action %v', beastAction, message.opCode)
@@ -261,7 +277,17 @@ export function matchLoop(
   const updates = AdventureEngine.proceedActions(state.adventure, moves, shoots)
   updates.moves.push(...onboardMoves)
 
-  if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length) {
+  // process drop items
+  for (const action of dropItems) {
+    const { beastId: itemId, pixel } = action
+    const isDropped = AdventureEngine.dropItemOnMap(state.adventure, itemId, pixel)
+    if (isDropped) {
+      updates.changedPixels.push(pixel)
+      updates.changedPixelItems.push(itemId)
+    }
+  }
+
+  if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length || updates.changedPixels.length) {
     const data = encodeMatchUpdate(updates)
     // const buff = new flatbuffers.ByteBuffer(data)
     // const updateState = UpdateState.getRootAsUpdateState(buff)

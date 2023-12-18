@@ -7,6 +7,9 @@ https://github.com/heroiclabs/nakama-project-template
 # build with rollup
 npm run build
 
+# migrate for the first time
+nakama.exe migrate up --database.address postgres:a@127.0.0.1:5432
+
 # run
 nakama --config local.yml
 ```
@@ -16,13 +19,13 @@ nakama --config local.yml
 When server start
 
 - Register handlers for the match `adventure_match`
-    - matchInit,
-    - matchJoinAttempt,
-    - matchJoin,
-    - matchLeave,
-    - matchLoop,
-    - matchSignal,
-    - matchTerminate
+  - matchInit,
+  - matchJoinAttempt,
+  - matchJoin,
+  - matchLeave,
+  - matchLoop,
+  - matchSignal,
+  - matchTerminate
 
 - Create the match `adventure_match`
 
@@ -91,11 +94,11 @@ Run `tickRate` time(s) (1 in this case) per second.
 - Check if action come from owner.
 
 - Process actions in order, update match state.
-    - move
-    - shoot
-    - equip
-        - client update onchain and inform server
-        - server confirm equipped data onchain, update game states
+  - move
+  - shoot
+  - equip
+    - client update onchain and inform server
+    - server confirm equipped data onchain, update game states
 
 - Calculate state changes, encode using flatbuffer and send to all clients.
 
