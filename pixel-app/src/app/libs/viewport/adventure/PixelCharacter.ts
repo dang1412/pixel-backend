@@ -4,7 +4,7 @@ import { sound } from '@pixi/sound'
 import { PixelPoint } from '../types'
 import { EngineViewport } from '../EngineViewport'
 import { PixelAdventure } from '.'
-import { itemImages } from './constants'
+import { itemImages, itemWearImages } from './constants'
 
 export interface CharacterOptions {
   id: number
@@ -54,7 +54,7 @@ export class PixelCharacter {
     scene.getMainContainer().addChild(this.container)
     const pixelSize = scene.options.pixelSize
 
-    // draw circle
+    // draw range
     let circle = this.rangeDraw
     circle.beginFill(this.isEnemy ? 0xFF0000 : 0x00FF00)  // Color of the circle (red in this example)
     circle.drawCircle(pixelSize / 2, pixelSize / 2, pixelSize * (this.range + .5))  // x, y, radius
@@ -161,16 +161,46 @@ export class PixelCharacter {
     bar.endFill()
   }
 
+  drawRange() {
+    const pixelSize = this.adv.map.scene.options.pixelSize
+    let circle = this.rangeDraw
+    circle.clear()
+    circle.beginFill(this.isEnemy ? 0xFF0000 : 0x00FF00)  // Color of the circle (red in this example)
+    circle.drawCircle(pixelSize / 2, pixelSize / 2, pixelSize * (this.range + .5))  // x, y, radius
+    circle.endFill()
+    circle.alpha = 0.12
+    circle.visible = false
+  }
+
   async drawEquip(id: number) {
     const equipDraw = this.equipDraw
+    if (id === 0) {
+      // item off
+      equipDraw.texture = Texture.EMPTY
+      // range become default
+      this.range = 4
+      this.drawRange()
+      return
+    }
+
+    // equips item 1, 2 or 3
     const pixelSize = this.adv.map.scene.options.pixelSize
 
-    const image = itemImages[id]
+    const image = itemWearImages[id]
     equipDraw.texture = image ? await Texture.fromURL(image) : Texture.EMPTY
     equipDraw.width = pixelSize * 1.5
     equipDraw.height = pixelSize * 1.5
     equipDraw.x = equipDraw.y = pixelSize / 2
     equipDraw.anchor.set(0.5, 0.5)
+    
+    this.range = 5
+
+    if (id === 3) {
+      equipDraw.y = pixelSize * 4/5
+      this.range = 8
+    }
+
+    this.drawRange()
   }
 
   isInRange(x: number, y: number): boolean {

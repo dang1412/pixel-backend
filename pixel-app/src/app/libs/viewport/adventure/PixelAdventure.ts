@@ -34,10 +34,10 @@ export class PixelAdventure {
   textureAnimate: TextureAnimate
 
   constructor(public map: PixelMap) {
-    map.scene.addImageURL({x: 50, y: 43, w:1, h:1}, '/svgs/car.svg', 'items')
-    map.scene.addImageURL({x: 43, y: 46, w:1, h:1}, '/svgs/power.svg', 'items')
+    // map.scene.addImageURL({x: 50, y: 43, w:1, h:1}, '/svgs/car.svg', 'items')
+    // map.scene.addImageURL({x: 43, y: 46, w:1, h:1}, '/svgs/power.svg', 'items')
     map.scene.addImageURL({x: 44, y: 50, w:1, h:1}, '/svgs/coins.svg', 'items')
-    map.scene.addImageURL({x: 57, y: 54, w:1, h:1}, '/svgs/rocket.svg', 'items')
+    // map.scene.addImageURL({x: 57, y: 54, w:1, h:1}, '/svgs/rocket.svg', 'items')
 
     const engine = map.engine
     this.textureAnimate = new TextureAnimate(engine)

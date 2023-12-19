@@ -7,8 +7,9 @@ import { ViewportWorld } from '../ViewportWorld'
 import { mockImages } from '../ViewDisplayDemo/data'
 // import { TimeCounting } from './TimeCounting'
 import { PixelOver } from './PixelOver'
+import { itemImages } from '@/libs/viewport/adventure/constants'
 
-const controlClass = 'relative rounded bg-gray-400 p-1 mx-1 text-gray-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-white'
+const controlClass = 'rounded bg-gray-400 p-1 mx-1 text-lg text-gray-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-white'
 
 const beastImages = [
   '/images/axie.png',
@@ -20,11 +21,11 @@ const beastImages = [
   '/images/amu2.png',
 ]
 
-const itemIds = [1,2]
-const itemImages: { [id: number]: string } = {
-  1: '/images/bluelight.png',
-  2: '/images/aura.png'
-}
+const itemIds = Object.keys(itemImages).map(id => Number(id)).sort()
+// const itemImages: { [id: number]: string } = {
+//   1: '/svgs/power.svg',
+//   2: '/svgs/rocket.svg'
+// }
 
 interface Props {
   images?: PixelImage[]
@@ -150,20 +151,27 @@ export const ViewAdventure: React.FC<Props> = (props) => {
             title='Move mode'
           >
             <FaPersonWalking />
-          </button>(A)
+          </button> (A)
           <button
             className={`${controlClass} ${moveOrShoot === 1 ? 'text-white' : ''}`}
             onClick={() => setMoveOrShoot(1)}
             title='Shoot mode'
           >
             <FaGun />
-          </button>(S)
+          </button> (S)
+          <button
+            className={`${controlClass}`}
+            onClick={() => setMoveOrShoot(1)}
+            title='Drop Item'
+          >
+            <FaGun />
+          </button> (D)
           {isSubmap && <button onClick={goParentMap} title='Go main map'><FaTurnUp /></button>}
         </>}
       />
       {beastImages.map((img, ind) => <img className='inline-block' key={ind} id={`axie-${ind}`} src={img} onDragStart={(e) => dragStart(e, ind)} width="100" height="100" />)}
       <br/>
-      {itemIds.map((id, ind) => <img className='inline-block' key={ind} id={`item-${ind}`} src={itemImages[id]} onDragStart={(e) => dragItem(e, id)} width="60" height="60" />)}
+      {itemIds.map((id, ind) => <img className='inline-block mr-2' key={ind} id={`item-${ind}`} src={itemImages[id]} onDragStart={(e) => dragItem(e, id)} width="60" height="60" />)}
     </div>
   )
 }
