@@ -1,13 +1,10 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js'
 import { sound } from '@pixi/sound'
 
-import { PixelMap } from '../PixelMap'
 import { PixelPoint } from '../types'
 import { EngineViewport } from '../EngineViewport'
 import { PixelAdventure } from '.'
 import { itemImages } from './constants'
-
-const energyTexture = Texture.fromURL('/images/energy2.png')
 
 export interface CharacterOptions {
   id: number
@@ -92,8 +89,6 @@ export class PixelCharacter {
     this.container.addChild(bar)
     // this.updateHp(2)
 
-    
-
     // container position
     scene.setImagePosition(this.container, this.x, this.y)
 
@@ -126,7 +121,7 @@ export class PixelCharacter {
         lasty = py
         if (this.isInRange(px, py)) {
           const mode = this.adv.controlMode
-          scene.setSelectingImageTexture(mode === 0 ? texture : await energyTexture, 0.4)
+          scene.setSelectingImageTexture(mode === 0 ? texture : Texture.from('energy'), 0.4)
           scene.selectArea({ x: px, y: py, w: mode === 0 ? character.width / pixelSize : 1, h: mode === 0 ? character.height / pixelSize : 1 })
         } else {
           scene.clearSelect()
@@ -190,7 +185,7 @@ export class PixelCharacter {
     this.adv.map.scene.viewport.dirty = true
   }
 
-  async move(tx: number, ty: number): Promise<void> {
+  async move(tx: number, ty: number, type = 0): Promise<void> {
     const engine = this.adv.map.engine
     if (!this.isEnemy) {
       
@@ -202,9 +197,8 @@ export class PixelCharacter {
     this.y = ty
   }
 
-  async shoot(tx: number, ty: number): Promise<void> {
-    const energy = new Sprite()
-    energy.texture = await energyTexture
+  async shoot(tx: number, ty: number, type = 0): Promise<void> {
+    const energy = new Sprite(Texture.from('energy'))
 
     const engine = this.adv.map.engine
     const scene = this.adv.map.scene
@@ -220,6 +214,14 @@ export class PixelCharacter {
     scene.setImagePosition(energy, this.x, this.y)
     await move(engine, energy, { x: this.x, y: this.y }, {x: tx, y: ty})
     scene.getMainContainer().removeChild(energy)
+
+    if (type === 1) {
+      this.adv.textureAnimate.animate({x: tx + 1, y: ty - 1, w: 5, h: 5}, 27, 'explo1_')
+      sound.play('explode1', {volume: 0.4})
+    } else if (type === 2) {
+      this.adv.textureAnimate.animate({x: tx, y: ty, w: 5, h: 5}, 48, 'flame_')
+      sound.play('explode2', {volume: 0.4})
+    }
   }
 
   // actRandom() {

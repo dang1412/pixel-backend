@@ -1,0 +1,85 @@
+{"frames": {
+
+"flame_05.png":
+{
+	"frame": {"x":1362,"y":2,"w":607,"h":675},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":77,"y":126,"w":607,"h":675},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_08.png":
+{
+	"frame": {"x":749,"y":615,"w":607,"h":733},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":76,"y":68,"w":607,"h":733},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_18.png":
+{
+	"frame": {"x":2,"y":624,"w":610,"h":745},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":61,"y":56,"w":610,"h":745},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_19.png":
+{
+	"frame": {"x":624,"y":2,"w":611,"h":736},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":58,"y":65,"w":611,"h":736},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_20.png":
+{
+	"frame": {"x":620,"y":1350,"w":612,"h":727},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":56,"y":74,"w":612,"h":727},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_25.png":
+{
+	"frame": {"x":2,"y":1236,"w":616,"h":682},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":44,"y":119,"w":616,"h":682},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_26.png":
+{
+	"frame": {"x":1358,"y":615,"w":616,"h":673},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":42,"y":128,"w":616,"h":673},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_33.png":
+{
+	"frame": {"x":2,"y":2,"w":620,"h":620},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":33,"y":182,"w":620,"h":620},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_34.png":
+{
+	"frame": {"x":1349,"y":1350,"w":619,"h":617},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":36,"y":185,"w":619,"h":617},
+	"sourceSize": {"w":690,"h":804}
+}},
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.1",
+	"image": "fire3-2.png",
+	"format": "RGBA8888",
+	"size": {"w":2039,"h":1969},
+	"scale": "1",
+	"related_multi_packs": [ "fire3-0.json", "fire3-1.json", "fire3-3.json", "fire3-4.json", "fire3-5.json" ],
+	"smartupdate": "$TexturePacker:SmartUpdate:cff5f01501dd95c5c86839c8884ff957:b4662538d8ab718e5cb2619354688656:1a8b4af9d66d411a1b13b637f75c3ec4$"
+}
+}

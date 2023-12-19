@@ -1,0 +1,88 @@
+{"frames": {
+
+"flame_02.png":
+{
+	"frame": {"x":1418,"y":2,"w":607,"h":619},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":78,"y":183,"w":607,"h":619},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_11.png":
+{
+	"frame": {"x":626,"y":2,"w":607,"h":790},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":75,"y":11,"w":607,"h":790},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_12.png":
+{
+	"frame": {"x":2,"y":633,"w":606,"h":799},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":75,"y":2,"w":606,"h":799},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_13.png":
+{
+	"frame": {"x":803,"y":611,"w":606,"h":790},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":73,"y":11,"w":606,"h":790},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_14.png":
+{
+	"frame": {"x":624,"y":1403,"w":607,"h":781},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":70,"y":20,"w":607,"h":781},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_15.png":
+{
+	"frame": {"x":1411,"y":611,"w":608,"h":772},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":68,"y":29,"w":608,"h":772},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_29.png":
+{
+	"frame": {"x":2,"y":1241,"w":620,"h":646},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":34,"y":155,"w":620,"h":646},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_30.png":
+{
+	"frame": {"x":1407,"y":1403,"w":620,"h":638},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":32,"y":164,"w":620,"h":638},
+	"sourceSize": {"w":690,"h":804}
+},
+"flame_31.png":
+{
+	"frame": {"x":2,"y":2,"w":622,"h":629},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":29,"y":173,"w":622,"h":629},
+	"sourceSize": {"w":690,"h":804}
+}},
+"animations": {
+	"flame": ["flame_00.png","flame_01.png","flame_02.png","flame_03.png","flame_04.png","flame_05.png","flame_06.png","flame_07.png","flame_08.png","flame_09.png","flame_10.png","flame_11.png","flame_12.png","flame_13.png","flame_14.png","flame_15.png","flame_16.png","flame_17.png","flame_18.png","flame_19.png","flame_20.png","flame_21.png","flame_22.png","flame_23.png","flame_24.png","flame_25.png","flame_26.png","flame_27.png","flame_28.png","flame_29.png","flame_30.png","flame_31.png","flame_32.png","flame_33.png","flame_34.png","flame_35.png","flame_36.png","flame_37.png","flame_38.png","flame_39.png","flame_40.png","flame_41.png","flame_42.png","flame_43.png","flame_44.png","flame_45.png","flame_46.png","flame_47.png","flame_48.png"]
+},
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.1",
+	"image": "fire3-0.png",
+	"format": "RGBA8888",
+	"size": {"w":2039,"h":2043},
+	"scale": "1",
+	"related_multi_packs": [ "fire3-1.json", "fire3-2.json", "fire3-3.json", "fire3-4.json", "fire3-5.json" ],
+	"smartupdate": "$TexturePacker:SmartUpdate:cff5f01501dd95c5c86839c8884ff957:b4662538d8ab718e5cb2619354688656:1a8b4af9d66d411a1b13b637f75c3ec4$"
+}
+}

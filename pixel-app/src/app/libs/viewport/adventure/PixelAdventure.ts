@@ -5,6 +5,8 @@ import { CharacterOptions, PixelCharacter } from './PixelCharacter'
 import { AdventureUpdate, getPixelXYFromIndex } from 'adventure_engine'
 import { WORLD_WIDTH } from '../constants'
 import { beastImageMap, itemImages } from './constants'
+import { Assets, Loader, Rectangle, Spritesheet, Texture } from 'pixi.js'
+import { TextureAnimate } from './TextureAnimate'
 
 interface PixelAction {
   char: PixelCharacter
@@ -29,6 +31,8 @@ export class PixelAdventure {
   // shoot or move control mode
   controlMode = 0
 
+  textureAnimate: TextureAnimate
+
   constructor(public map: PixelMap) {
     map.scene.addImageURL({x: 50, y: 43, w:1, h:1}, '/svgs/car.svg', 'items')
     map.scene.addImageURL({x: 43, y: 46, w:1, h:1}, '/svgs/power.svg', 'items')
@@ -36,6 +40,7 @@ export class PixelAdventure {
     map.scene.addImageURL({x: 57, y: 54, w:1, h:1}, '/svgs/rocket.svg', 'items')
 
     const engine = map.engine
+    this.textureAnimate = new TextureAnimate(engine)
 
     engine.on('dropbeast', (id: number, px: number, py: number) => {
       // add beast to the map
@@ -53,6 +58,111 @@ export class PixelAdventure {
 
     sound.add('move', '/sounds/whistle.mp3')
     sound.add('shoot', '/sounds/sword.mp3')
+
+    this.load()
+  }
+
+  async load() {
+    Assets.add('energy', '/images/energy2.png')
+    Assets.load('energy')
+    Assets.load<Spritesheet>('/images/animations/fire3-0.json')
+    Assets.load<Spritesheet>('/images/animations/explosion1.json')
+
+    sound.add('die', '/sounds/char-die.mp3')
+    sound.add('explode1', '/sounds/explosion3.mp3')
+    sound.add('explode2', '/sounds/explosion4.mp3')
+
+    // Assets.add('strike', '/images/animations/strike.png')
+    // const strikeSpriteSheet = await Assets.load<Texture>('strike')
+
+    // let count = 0
+    // let running = false
+    // const rec = new Rectangle(4 * 192, 4 * 192, 192, 192)
+    // const t = new Texture(strikeSpriteSheet.baseTexture, rec)
+    // let sprite = this.map.scene.addLayerAreaTexture({x: 50, y: 50, w: 3, h: 3}, t, 'test')
+    // const tick = (dt: number) => {
+    //   running = true
+    //   if (count % 5 === 0) {
+
+    //     const frameNum = count / 5
+
+    //     const row = Math.floor(frameNum / 5)
+    //     const col = frameNum % 5
+    //     console.log('Render animation', row, col)
+    //     const rec = new Rectangle(col * 192, row * 192, 192, 192)
+    //     const t = new Texture(strikeSpriteSheet.baseTexture, rec)
+    //     sprite = this.map.scene.addLayerAreaTexture({x: 50, y: 50, w: 3, h: 3}, t, 'test')
+
+    //     if (frameNum === 24) {
+    //       engine.removeTick(tick)
+    //       running = false
+    //     }
+    //   }
+
+    //   count ++
+    //   this.map.scene.viewport.dirty = true
+    // }
+
+    // sprite.interactive = true
+    // sprite.on('mouseover', () => {
+    //   if (!running) {
+    //     console.log('start run')
+    //     count = 0
+    //     this.map.scene.viewport.dirty = true
+    //     engine.addTick(tick)
+    //   }
+    // })
+    // setTimeout(() => engine.addTick(tick), 2000)
+
+    // const asset = await Assets.loadBundle<Texture>('animations')
+    // Texture.from('')
+    // Assets.load()
+
+    // const sheet = await Assets.load<Spritesheet>('/images/animations/explosion1.json')
+    // const sheet = await Assets.load<Spritesheet>('/images/animations/fire-0.json')
+    // const t20 = sheet.textures['20.png']
+    // const sprite = this.map.scene.addLayerAreaTexture({x: 50, y: 50, w: 5, h: 5}, t20, 'test')
+    // sprite.anchor.set(0.5, 0.5)
+    // // sprite.angle = -30
+
+    // let count = 0
+    // let running = false
+    // const tick = (dt: number) => {
+    //   running = true
+    //   if (count % 3 === 0) {
+
+    //     const frameNum = count / 3
+    //     const frameStr = (frameNum < 10 ? `0` : '') + `${frameNum}`
+    //     // sprite.angle += 5
+
+    //     // const row = Math.floor(frameNum / 5)
+    //     // const col = frameNum % 5
+    //     console.log('Render animation', frameNum)
+    //     // const rec = new Rectangle(col * 192, row * 192, 192, 192)
+    //     // const t = new Texture(strikeSpriteSheet.baseTexture, rec)
+    //     const t = Texture.from(`${frameStr}.png`)
+    //     sprite.texture = t
+    //     // this.map.scene.addLayerAreaTexture({x: 50.5, y: 50.5, w: 4, h: 4}, t, 'test')
+
+    //     if (frameNum === 40) {
+    //       engine.removeTick(tick)
+    //       running = false
+    //     }
+    //   }
+
+    //   count ++
+    //   this.map.scene.viewport.dirty = true
+    // }
+
+    // sprite.interactive = true
+    // sprite.on('mouseover', () => {
+    //   if (!running) {
+    //     console.log('start run')
+    //     count = 0
+    //     this.map.scene.viewport.dirty = true
+    //     engine.addTick(tick)
+    //   }
+    // })
   }
 
   drawItemOnMap(id: number, pixel: number) {
@@ -81,8 +191,8 @@ export class PixelAdventure {
     const { moves, shoots, changedBeasts, changedBeastHps, changedBeastEquips, changedPixels, changedPixelItems } = updates
     // clear select before execute actions
     this.map.scene.clearSelect()
-    await Promise.all(moves.map(m => this.move(m.beastId, m.pixel)))
-    await Promise.all(shoots.map(s => this.shoot(s.beastId, s.pixel)))
+    await Promise.all(moves.map(m => this.move(m.beastId, m.pixel, m.type)))
+    await Promise.all(shoots.map(s => this.shoot(s.beastId, s.pixel, s.type)))
 
     changedBeasts.forEach((beastId, ind) => {
       const beast = this.idCharacterMap.get(beastId)
@@ -121,13 +231,13 @@ export class PixelAdventure {
   //   }
   // }
 
-  async move(id: number, pixelId: number): Promise<void> {
+  async move(id: number, pixelId: number, type = 0): Promise<void> {
     const char = this.idCharacterMap.get(id)
     const [x, y] = this.map.scene.getPixelXYFromIndex(pixelId)
     if (char) {
       const oldpos = this.map.scene.getPixelIndex(char.x, char.y)
       if (oldpos === pixelId) return
-      await char.move(x, y)
+      await char.move(x, y, type)
       this.pixelCharacterMap.set(pixelId, char)
 
       // delete old pos
@@ -138,11 +248,11 @@ export class PixelAdventure {
     }
   }
 
-  async shoot(charId: number, pixelId: number): Promise<void> {
+  async shoot(charId: number, pixelId: number, type = 0): Promise<void> {
     const char = this.idCharacterMap.get(charId)
     if (char) {
       let [x, y] = this.map.scene.getPixelXYFromIndex(pixelId)
-      await char.shoot(x, y)
+      await char.shoot(x, y, type)
     }
   }
 

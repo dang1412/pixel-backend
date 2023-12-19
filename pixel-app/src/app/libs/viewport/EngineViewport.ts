@@ -304,6 +304,7 @@ export class EngineViewport {
   private runUpdate() {
     if (this.viewport.dirty) {
       // render wrapper includes minimap and viewport
+      console.log('render ticks length', this.ticks.length)
       this.renderer.render(this.wrapper)
       this.viewport.dirty = false
       for (const tick of this.ticks) {

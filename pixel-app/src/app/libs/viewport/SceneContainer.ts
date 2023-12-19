@@ -171,9 +171,11 @@ export class SceneContainer {
     return getPixelIndexesFromArea(area, this.options.worldWidthPixel)
   }
 
-  setImagePosition(image: Container, x: number, y: number) {
+  setImagePosition(image: Container, x: number, y: number, w = 0, h = 0) {
     const pixelSize = this.options.pixelSize
     image.position.set(pixelSize * x, pixelSize * y)
+    if (w) image.width = w * pixelSize
+    if (h) image.height = h * pixelSize
     this.viewport.dirty = true
   }
 
@@ -245,12 +247,11 @@ export class SceneContainer {
     const container = this.getLayerContainer(layer)
     const pixelSpriteMap = this.layerPixelSpriteMap[layer]
 
-    const [x, y] = this.getPixelXYFromIndex(index)
-
     if (!pixelSpriteMap[index]) {
       // init the new pixel, size 1x1
       const pixel = new Sprite(Texture.WHITE)
       pixel.width = pixel.height = this.options.pixelSize
+      const [x, y] = this.getPixelXYFromIndex(index)
       pixel.position.set(x * this.options.pixelSize, y * this.options.pixelSize)
 
       // add to map
@@ -270,7 +271,7 @@ export class SceneContainer {
    * @param layer 
    * @returns 
    */
-  private addLayerAreaTexture(area: PixelArea, texture: Texture = Texture.WHITE, layer = ''): Sprite {
+  addLayerAreaTexture(area: PixelArea, texture: Texture = Texture.WHITE, layer = ''): Sprite {
     const { x, y, w, h } = area
 
     const pixel = this.getLayerPixel(x, y, layer)
