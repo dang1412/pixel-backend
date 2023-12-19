@@ -254,6 +254,7 @@ export function matchLoop(
       // logger.info('Received %v from %v', JSON.parse(nk.binaryToString(message.data)), message.sender.userId)
       // dispatcher.broadcastMessage(1, message.data, [message.sender], null)
       const beastAction = decodeAction(new Uint8Array(message.data))
+      beastAction.type = state.adventure.beastEquipItemMap[beastAction.beastId] || 0
       if (message.opCode === 0) {
         moves.push(beastAction)
       } else if (message.opCode === 1) {

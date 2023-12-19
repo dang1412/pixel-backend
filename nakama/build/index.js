@@ -261,20 +261,6 @@ var Encoding;
   Encoding[Encoding["UTF16_STRING"] = 2] = "UTF16_STRING";
 })(Encoding || (Encoding = {}));
 
-function _toPrimitive(t, r) {
-  if ("object" != typeof t || !t) return t;
-  var e = t[Symbol.toPrimitive];
-  if (void 0 !== e) {
-    var i = e.call(t, r || "default");
-    if ("object" != typeof i) return i;
-    throw new TypeError("@@toPrimitive must return a primitive value.");
-  }
-  return ("string" === r ? String : Number)(t);
-}
-function _toPropertyKey(t) {
-  var i = _toPrimitive(t, "string");
-  return "symbol" == typeof i ? i : String(i);
-}
 function _classCallCheck(instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new TypeError("Cannot call a class as a function");
@@ -296,6 +282,20 @@ function _createClass(Constructor, protoProps, staticProps) {
     writable: false
   });
   return Constructor;
+}
+function _toPrimitive(input, hint) {
+  if (typeof input !== "object" || input === null) return input;
+  var prim = input[Symbol.toPrimitive];
+  if (prim !== undefined) {
+    var res = prim.call(input, hint || "default");
+    if (typeof res !== "object") return res;
+    throw new TypeError("@@toPrimitive must return a primitive value.");
+  }
+  return (hint === "string" ? String : Number)(input);
+}
+function _toPropertyKey(arg) {
+  var key = _toPrimitive(arg, "string");
+  return typeof key === "symbol" ? key : String(key);
 }
 
 var ByteBuffer = /*#__PURE__*/function () {
@@ -968,6 +968,7 @@ var Builder = /*#__PURE__*/function () {
       for (var i = 0; i < numfields; i++) {
         this.vtable[i] = 0; // This will push additional elements as needed
       }
+
       this.isNested = true;
       this.object_start = this.offset();
     }
@@ -1530,7 +1531,7 @@ function matchInit(ctx, logger, nk, params) {
       presences: presences,
       adventure: adventure
     },
-    tickRate: 1,
+    tickRate: 2,
     label: 'PixelAdventure'
   };
 }
@@ -1592,6 +1593,7 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
   var dropItems = [];
   messages.forEach(function (message) {
     var beastAction = decodeAction(new Uint8Array(message.data));
+    beastAction.type = state.adventure.beastEquipItemMap[beastAction.beastId] || 0;
     if (message.opCode === 0) {
       moves.push(beastAction);
     } else if (message.opCode === 1) {
