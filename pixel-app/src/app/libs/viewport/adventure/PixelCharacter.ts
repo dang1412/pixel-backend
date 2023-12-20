@@ -4,14 +4,14 @@ import { sound } from '@pixi/sound'
 import { PixelPoint } from '../types'
 import { EngineViewport } from '../EngineViewport'
 import { PixelAdventure } from '.'
-import { itemImages, itemWearImages } from './constants'
+import { itemWearImages } from './constants'
 
 export interface CharacterOptions {
   id: number
   name?: string
   size?: number
   range?: number
-  isEnemy?: boolean
+  // isEnemy?: boolean
   // hp?: number
 }
 
@@ -28,7 +28,7 @@ export class PixelCharacter {
   name: string
   size: number
   range: number
-  isEnemy: boolean
+  equippingItem = 0
 
   //
   hp = 0
@@ -36,15 +36,14 @@ export class PixelCharacter {
   selecting = false
 
   //
-  alive = true
+  // alive = true
+  controlMode = 0
 
   constructor(public adv: PixelAdventure, public x: number, public y: number, options: CharacterOptions, imageUrl = '/images/ghost.png') {
     this.id = options.id
     this.name = options.name || `pixelpuppy-${options.id}`
     this.size = options.size || 1
     this.range = options.range || 2
-    this.isEnemy = options.isEnemy || false
-    // this.hp = options.hp || 3
 
     this.setup(imageUrl)
   }
@@ -56,12 +55,13 @@ export class PixelCharacter {
 
     // draw range
     let circle = this.rangeDraw
-    circle.beginFill(this.isEnemy ? 0xFF0000 : 0x00FF00)  // Color of the circle (red in this example)
-    circle.drawCircle(pixelSize / 2, pixelSize / 2, pixelSize * (this.range + .5))  // x, y, radius
-    circle.endFill()
-    circle.alpha = 0.12
-    circle.visible = false
+    // circle.beginFill(0x00FF00)  // Color of the circle (red in this example)
+    // circle.drawCircle(pixelSize / 2, pixelSize / 2, pixelSize * (this.range + .5))  // x, y, radius
+    // circle.endFill()
+    // circle.alpha = 0.12
+    // circle.visible = false
     this.container.addChild(circle)
+    this.drawRange()
 
 
     // draw character
@@ -81,7 +81,6 @@ export class PixelCharacter {
 
     // draw equip
     const equipDraw = this.equipDraw
-    
     this.container.addChild(equipDraw)
 
     // draw HP
@@ -107,7 +106,10 @@ export class PixelCharacter {
 
     const engine = this.adv.map.engine
     const controlstart = () => {
+      // set engine mode 2 (control mode)
       engine.setDragOrSelectMode(2)
+      // inform this is last controlled beast
+      this.adv.setControlBeast(this)
       this.selecting = true
       circle.visible = true
 
@@ -120,7 +122,7 @@ export class PixelCharacter {
         lastx = px
         lasty = py
         if (this.isInRange(px, py)) {
-          const mode = this.adv.controlMode
+          const mode = this.controlMode
           scene.setSelectingImageTexture(mode === 0 ? texture : Texture.from('energy'), 0.4)
           scene.selectArea({ x: px, y: py, w: mode === 0 ? character.width / pixelSize : 1, h: mode === 0 ? character.height / pixelSize : 1 })
         } else {
@@ -142,7 +144,7 @@ export class PixelCharacter {
           // emit control
           // engine.emit('control', this.x, this.y, px, py)
           const pixel = this.adv.map.scene.getPixelIndex(px, py)
-          this.adv.outputCtrl(this.adv.controlMode === 0 ? 0 : 1, this.id, pixel)
+          this.adv.outputCtrl(this.controlMode === 0 ? 0 : 1, this.id, pixel)
         }
       })
     }
@@ -165,7 +167,7 @@ export class PixelCharacter {
     const pixelSize = this.adv.map.scene.options.pixelSize
     let circle = this.rangeDraw
     circle.clear()
-    circle.beginFill(this.isEnemy ? 0xFF0000 : 0x00FF00)  // Color of the circle (red in this example)
+    circle.beginFill(0x00FF00)  // Color of the circle (red in this example)
     circle.drawCircle(pixelSize / 2, pixelSize / 2, pixelSize * (this.range + .5))  // x, y, radius
     circle.endFill()
     circle.alpha = 0.12
@@ -173,6 +175,10 @@ export class PixelCharacter {
   }
 
   async drawEquip(id: number) {
+    // not change equip
+    if (this.equippingItem === id) return
+
+    this.equippingItem = id
     const equipDraw = this.equipDraw
     if (id === 0) {
       // item off
@@ -209,44 +215,56 @@ export class PixelCharacter {
     return Math.abs(x - this.x) <= this.range && Math.abs(y - this.y) <= this.range
   }
 
-  select(selecting = true) {
-    this.selecting = selecting
-    this.rangeDraw.visible = selecting
-    this.adv.map.scene.viewport.dirty = true
-  }
+  // select(selecting = true) {
+  //   this.selecting = selecting
+  //   this.rangeDraw.visible = selecting
+  //   this.adv.map.scene.viewport.dirty = true
+  // }
 
   async move(tx: number, ty: number, type = 0): Promise<void> {
     const engine = this.adv.map.engine
-    if (!this.isEnemy) {
-      
-      sound.play('move', {volume: 0.5})
-    }
+    sound.play('move', {volume: 0.5})
     engine.viewport.dirty = true
     await move(engine, this.container, {x: this.x, y: this.y}, {x: tx, y: ty})
     this.x = tx
     this.y = ty
   }
 
+  private createEnergy(pixelSize: number, type = 0): [Sprite, number, number] {
+    const energy = new Sprite(Texture.from(type ? 'strike_24.png' : 'energy'))
+    energy.width = energy.height = pixelSize
+
+    let dx = 0, dy = 0
+
+    if (type) {
+      energy.width = energy.height = pixelSize * 3
+      // energy.anchor.set(0.5, 0.5)
+      this.adv.textureAnimate.animateSprite(energy, 24, 'strike_', 2)
+      dx = -1
+      dy = -1
+    }
+
+    return [energy, dx, dy]
+  }
+
   async shoot(tx: number, ty: number, type = 0): Promise<void> {
-    const energy = new Sprite(Texture.from('energy'))
 
     const engine = this.adv.map.engine
     const scene = this.adv.map.scene
     const pixelSize = scene.options.pixelSize
-    energy.width = energy.height = pixelSize
+
+    const [energy, dx, dy] = this.createEnergy(pixelSize, type)
 
     // shoot sound
-    if (!this.isEnemy) {
-      sound.play('shoot', {volume: 0.4})
-    }
+    sound.play('shoot', {volume: 0.4})
 
     scene.getMainContainer().addChild(energy)
-    scene.setImagePosition(energy, this.x, this.y)
-    await move(engine, energy, { x: this.x, y: this.y }, {x: tx, y: ty})
+    scene.setImagePosition(energy, this.x + dx, this.y + dy)
+    await move(engine, energy, { x: this.x + dx, y: this.y + dy }, {x: tx + dx, y: ty + dy})
     scene.getMainContainer().removeChild(energy)
 
     if (type === 1) {
-      this.adv.textureAnimate.animate({x: tx + 1, y: ty - 1, w: 5, h: 5}, 27, 'explo1_')
+      this.adv.textureAnimate.animate({x: tx + 0.5, y: ty - 0.7, w: 5, h: 5}, 27, 'explo1_')
       sound.play('explode1', {volume: 0.4})
     } else if (type === 2) {
       this.adv.textureAnimate.animate({x: tx, y: ty, w: 5, h: 5}, 48, 'flame_')

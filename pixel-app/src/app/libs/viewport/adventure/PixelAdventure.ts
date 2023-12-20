@@ -18,7 +18,7 @@ export class PixelAdventure {
   // characters
   pixelCharacterMap = new Map<number, PixelCharacter>()
   idCharacterMap = new Map<number, PixelCharacter>()
-  // selectingCharacter: PixelCharacter | null = null
+  lastControlBeast: PixelCharacter | null = null
 
   // // submap
   // pixelToSubGameMap: Map<number, PixelGameMap> = new Map()
@@ -26,10 +26,10 @@ export class PixelAdventure {
 
   // parent
   // parentGameMap: PixelGameMap | undefined
-  private isInitialized = false
+  // private isInitialized = false
 
   // shoot or move control mode
-  controlMode = 0
+  // controlMode = 0
 
   textureAnimate: TextureAnimate
 
@@ -56,21 +56,31 @@ export class PixelAdventure {
       this.outputCtrl(99, id, pixel)
     })
 
-    sound.add('move', '/sounds/whistle.mp3')
-    sound.add('shoot', '/sounds/sword.mp3')
-
     this.load()
   }
 
-  async load() {
-    Assets.add('energy', '/images/energy2.png')
-    Assets.load('energy')
-    Assets.load<Spritesheet>('/images/animations/fire3-0.json')
-    Assets.load<Spritesheet>('/images/animations/explosion1.json')
+  setControlBeast(beast: PixelCharacter) {
+    this.lastControlBeast = beast
+    this.onSetControlBeast(beast)
+  }
 
+  // to override
+  onSetControlBeast(beast: PixelCharacter) {}
+
+  async load() {
+    // sounds
+    sound.add('move', '/sounds/whistle.mp3')
+    sound.add('shoot', '/sounds/sword.mp3')
     sound.add('die', '/sounds/char-die.mp3')
     sound.add('explode1', '/sounds/explosion3.mp3')
     sound.add('explode2', '/sounds/explosion4.mp3')
+
+    // images
+    Assets.add('energy', '/images/energy2.png')
+    Assets.load('energy')
+    Assets.load<Spritesheet>('/animations/fire3-0.json')
+    Assets.load<Spritesheet>('/animations/explosion1.json')
+    Assets.load<Spritesheet>('/animations/strike-0.json')
 
     // Assets.add('strike', '/images/animations/strike.png')
     // const strikeSpriteSheet = await Assets.load<Texture>('strike')
@@ -179,12 +189,20 @@ export class PixelAdventure {
    * - 1: shoot
    * - 2: onboard beast
    * - 99: item drop on map
+   * - 199: beast drop equipping item
    * @param id 
    * @param pixel 
    * @param type 
    */
   outputCtrl(opcode: number, id: number, pixel: number, type?: number) {
     console.log('outputCtrl', opcode, id, pixel, type)
+  }
+
+  beastDropItem() {
+    const beast = this.lastControlBeast
+    if (beast) {
+      this.outputCtrl(199, beast.id, 0)
+    }
   }
 
   async updateMatch(updates: AdventureUpdate) {
@@ -244,7 +262,7 @@ export class PixelAdventure {
       this.pixelCharacterMap.delete(oldpos)
 
     } else {
-      this.addCharacter(x, y, { id, name: `puppy-${id}`, range: 4 }, '/images/axie.png')
+      this.addCharacter(x, y, { id, name: `beast-${id}`, range: 4 }, '/images/axie.png')
     }
   }
 
@@ -414,13 +432,13 @@ export class PixelAdventure {
     const deadChars: PixelCharacter[] = []
     for (const shoot of intendShoot) {
       const { char, targetIndex } = shoot
-      if (char.alive) {
+      if (1) { // alive
         const [tx, ty] = this.map.scene.getPixelXYFromIndex(targetIndex)
         allShoots.push(char.shoot(tx, ty))
 
         const target = this.pixelCharacterMap.get(targetIndex)
         if (target) {
-          target.alive = false
+          // target.alive = false
           deadChars.push(target)
           this.pixelCharacterMap.delete(targetIndex)
         }

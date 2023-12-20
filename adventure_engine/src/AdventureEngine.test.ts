@@ -23,7 +23,7 @@ describe('AdventureEngine', () => {
     AdventureEngine.onboardBeast(state, 1, 99, [])
     expect(state.beastPixelMap[1]).toBe(99)
 
-    const updates = AdventureEngine.proceedActions(state, [{ beastId: 1, pixel: 100 }], [])
+    const updates = AdventureEngine.proceedActions(state, [{ beastId: 1, pixel: 100 }], [], [])
     expect(updates.moves).toEqual([{ beastId: 1, pixel: 100 }])
   })
 
@@ -38,7 +38,7 @@ describe('AdventureEngine', () => {
     expect(state.beastPixelMap[2]).toBe(120)
     expect(state.pixelBeastMap[120]).toBe(2)
 
-    const _updates = AdventureEngine.proceedActions(state, [{ beastId: 1, pixel: 100 }], [])
+    const _updates = AdventureEngine.proceedActions(state, [{ beastId: 1, pixel: 100 }], [], [])
     AdventureEngine.onboardBeast(state, 3, 99, [])
 
     const pos = AdventureEngine.getAllBeastPositions(state)
@@ -103,7 +103,7 @@ describe('AdventureEngine', () => {
     AdventureEngine.dropItemOnMap(state, 1, 122)
 
     // beast move to pixel 100, to take the item on map
-    const updates = AdventureEngine.proceedActions(state, [{beastId: 1, pixel: 122}], [{beastId:2, pixel: 122}])
+    const updates = AdventureEngine.proceedActions(state, [{beastId: 1, pixel: 122}], [{beastId:2, pixel: 122}], [])
     const expectRs: AdventureUpdate = {
       moves: [{beastId: 1, pixel: 122}],
       shoots: [{beastId:2, pixel: 122}],

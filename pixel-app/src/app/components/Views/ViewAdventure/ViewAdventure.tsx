@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { FaGun, FaPersonWalking, FaTurnUp } from 'react-icons/fa6'
+import React, { use, useCallback, useEffect, useRef, useState } from 'react'
+import { FaGun, FaPersonWalking, FaTurnUp, FaRegHandLizard  } from 'react-icons/fa6'
 
 import { EngineViewport, PixelAdventure, PixelArea, PixelImage, PixelMap } from '@/libs/viewport'
 import { ViewportWorld } from '../ViewportWorld'
@@ -39,12 +39,13 @@ export const ViewAdventure: React.FC<Props> = (props) => {
   const [isSubmap, setIsSubmap] = useState(false)
 
   const [moveOrShoot, setMoveOrShoot] = useState(0)
+  const [isEquipping, setIsEquipping] = useState(false)
 
   // update adventure mode
   useEffect(() => {
     const adventure = adventureRef.current
-    if (adventure) {
-      adventure.controlMode = moveOrShoot
+    if (adventure && adventure.lastControlBeast) {
+      adventure.lastControlBeast.controlMode = moveOrShoot
     }
   }, [moveOrShoot])
 
@@ -57,6 +58,12 @@ export const ViewAdventure: React.FC<Props> = (props) => {
     onInitAdventure(adventure)
 
     adventureRef.current = adventure
+
+    adventure.onSetControlBeast = (beast) => {
+      console.log('control beast', beast)
+      setMoveOrShoot(beast.controlMode)
+      setIsEquipping(beast.equippingItem > 0)
+    }
   }, [])
 
   // load images
@@ -132,6 +139,13 @@ export const ViewAdventure: React.FC<Props> = (props) => {
     e.dataTransfer.setData('id', `${id}`)
   }, [])
 
+  const beastDropEquip = useCallback(() => {
+    const adventure = adventureRef.current
+    if (adventure) {
+      adventure.beastDropItem()
+    }
+  }, [])
+
   return (
     <div>
       <ViewportWorld
@@ -160,12 +174,13 @@ export const ViewAdventure: React.FC<Props> = (props) => {
             <FaGun />
           </button> (S)
           <button
+            hidden={!isEquipping}
             className={`${controlClass}`}
-            onClick={() => setMoveOrShoot(1)}
+            onClick={beastDropEquip}
             title='Drop Item'
           >
-            <FaGun />
-          </button> (D)
+            <FaRegHandLizard />
+          </button>
           {isSubmap && <button onClick={goParentMap} title='Go main map'><FaTurnUp /></button>}
         </>}
       />

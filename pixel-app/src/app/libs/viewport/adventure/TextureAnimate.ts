@@ -7,7 +7,7 @@ export class TextureAnimate {
 
   constructor(public engine: EngineViewport) {}
 
-  async animate(area: PixelArea, frameCount: number, prefix = '') {
+  async animate(area: PixelArea, frameCount: number, prefix = '', slow = 3) {
     const scene = this.engine.getCurrentScene()
     if (!scene) return
 
@@ -23,7 +23,7 @@ export class TextureAnimate {
     scene.getMainContainer().removeChild(sprite)
   }
 
-  async animateSprite(sprite: Sprite, frameCount: number, prefix = ''): Promise<void> {
+  async animateSprite(sprite: Sprite, frameCount: number, prefix = '', slow = 3): Promise<void> {
     const engine = this.engine
     const scene = engine.getCurrentScene()
     if (!scene) return
@@ -34,9 +34,9 @@ export class TextureAnimate {
     return new Promise((res) => {
       let count = 0
       const tick = (dt: number) => {
-        if (count % 3 === 0) {
+        if (count % slow === 0) {
           
-          const frameNum = count / 3
+          const frameNum = count / slow
           const frameStr = (frameNum < 10 ? `0` : '') + `${frameNum}`
           
           console.log('Render animation', frameNum)

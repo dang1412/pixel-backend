@@ -76,6 +76,9 @@ var AdventureEngine = function () {
     return [pixels, items];
   };
   AdventureEngine.onboardBeast = function (state, beastId, pixel, weapons, attrs) {
+    if (state.pixelBeastMap[pixel]) {
+      return false;
+    }
     AdventureEngine.executeMove(state, {
       beastId: beastId,
       pixel: pixel
@@ -86,6 +89,7 @@ var AdventureEngine = function () {
       moveRange: 4,
       shootRange: 4
     };
+    return true;
   };
   AdventureEngine.dropItemOnMap = function (state, itemId, pixel) {
     var currentItem = state.pixelItemMap[pixel];
@@ -95,7 +99,19 @@ var AdventureEngine = function () {
     state.pixelItemMap[pixel] = itemId;
     return true;
   };
-  AdventureEngine.proceedActions = function (state, moves, shoots) {
+  AdventureEngine.proceedDropItem = function (state, dropItems, updates) {
+    for (var _i = 0, dropItems_1 = dropItems; _i < dropItems_1.length; _i++) {
+      var action = dropItems_1[_i];
+      var itemId = action.beastId,
+        pixel = action.pixel;
+      var isDropped = AdventureEngine.dropItemOnMap(state, itemId, pixel);
+      if (isDropped) {
+        updates.changedPixels.push(pixel);
+        updates.changedPixelItems.push(itemId);
+      }
+    }
+  };
+  AdventureEngine.proceedActions = function (state, moves, shoots, dropEquipBeasts) {
     var updates = {
       moves: [],
       shoots: [],
@@ -105,8 +121,23 @@ var AdventureEngine = function () {
       changedPixels: [],
       changedPixelItems: []
     };
-    for (var _i = 0, moves_1 = moves; _i < moves_1.length; _i++) {
-      var move = moves_1[_i];
+    var changedBeastSet = new Set();
+    var changedPixelSet = new Set();
+    for (var _i = 0, dropEquipBeasts_1 = dropEquipBeasts; _i < dropEquipBeasts_1.length; _i++) {
+      var beastId = dropEquipBeasts_1[_i];
+      var item = state.beastEquipItemMap[beastId];
+      if (!item) continue;
+      var pixel = state.beastPixelMap[beastId];
+      if (pixel === undefined) continue;
+      var isDropped = AdventureEngine.dropItemOnMap(state, item, pixel);
+      if (isDropped) {
+        delete state.beastEquipItemMap[beastId];
+        changedBeastSet.add(beastId);
+        changedPixelSet.add(pixel);
+      }
+    }
+    for (var _a = 0, moves_1 = moves; _a < moves_1.length; _a++) {
+      var move = moves_1[_a];
       var beastId = move.beastId,
         pixel = move.pixel;
       state.beastAttrsMap[beastId];
@@ -118,9 +149,8 @@ var AdventureEngine = function () {
         }
       }
     }
-    var changedBeastSet = new Set();
-    for (var _a = 0, shoots_1 = shoots; _a < shoots_1.length; _a++) {
-      var shoot = shoots_1[_a];
+    for (var _b = 0, shoots_1 = shoots; _b < shoots_1.length; _b++) {
+      var shoot = shoots_1[_b];
       var beastId = shoot.beastId,
         pixel = shoot.pixel;
       var curpos = state.beastPixelMap[beastId];
@@ -129,13 +159,12 @@ var AdventureEngine = function () {
         updates.shoots.push(shoot);
       }
     }
-    var changedPixels = [];
-    for (var _b = 0, _c = updates.moves; _b < _c.length; _b++) {
-      var move = _c[_b];
+    for (var _c = 0, _d = updates.moves; _c < _d.length; _c++) {
+      var move = _d[_c];
       var beastId = AdventureEngine.tryEquips(state, move.pixel);
       if (beastId >= 0) {
         changedBeastSet.add(beastId);
-        changedPixels.push(move.pixel);
+        changedPixelSet.add(move.pixel);
       }
     }
     updates.changedBeasts = Array.from(changedBeastSet);
@@ -145,8 +174,8 @@ var AdventureEngine = function () {
     updates.changedBeastEquips = updates.changedBeasts.map(function (beastId) {
       return state.beastEquipItemMap[beastId] || 0;
     });
-    updates.changedPixels = changedPixels;
-    updates.changedPixelItems = changedPixels.map(function (pixel) {
+    updates.changedPixels = Array.from(changedPixelSet);
+    updates.changedPixelItems = updates.changedPixels.map(function (pixel) {
       return state.pixelItemMap[pixel] || 0;
     });
     return updates;
@@ -1531,7 +1560,7 @@ function matchInit(ctx, logger, nk, params) {
       presences: presences,
       adventure: adventure
     },
-    tickRate: 2,
+    tickRate: 1,
     label: 'PixelAdventure'
   };
 }
@@ -1591,6 +1620,7 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
   var shoots = [];
   var onboardMoves = [];
   var dropItems = [];
+  var dropEquipBeasts = [];
   messages.forEach(function (message) {
     var beastAction = decodeAction(new Uint8Array(message.data));
     beastAction.type = state.adventure.beastEquipItemMap[beastAction.beastId] || 0;
@@ -1600,26 +1630,20 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
       shoots.push(beastAction);
     } else if (message.opCode === 2) {
       logger.info('Onboard beast %v', beastAction);
-      AdventureEngine.onboardBeast(state.adventure, beastAction.beastId, beastAction.pixel, []);
-      onboardMoves.push(beastAction);
+      var onboarded = AdventureEngine.onboardBeast(state.adventure, beastAction.beastId, beastAction.pixel, []);
+      if (onboarded) onboardMoves.push(beastAction);
     } else if (message.opCode === 99) {
       logger.info('Drop item %v', beastAction);
       dropItems.push(beastAction);
+    } else if (message.opCode === 199) {
+      logger.info('Beast Drop item %v', beastAction);
+      dropEquipBeasts.push(beastAction.beastId);
     }
     logger.info('Received action %v', beastAction, message.opCode);
   });
-  var updates = AdventureEngine.proceedActions(state.adventure, moves, shoots);
+  var updates = AdventureEngine.proceedActions(state.adventure, moves, shoots, dropEquipBeasts);
   (_a = updates.moves).push.apply(_a, onboardMoves);
-  for (var _i = 0, dropItems_1 = dropItems; _i < dropItems_1.length; _i++) {
-    var action = dropItems_1[_i];
-    var itemId = action.beastId,
-      pixel = action.pixel;
-    var isDropped = AdventureEngine.dropItemOnMap(state.adventure, itemId, pixel);
-    if (isDropped) {
-      updates.changedPixels.push(pixel);
-      updates.changedPixelItems.push(itemId);
-    }
-  }
+  AdventureEngine.proceedDropItem(state.adventure, dropItems, updates);
   if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length || updates.changedPixels.length) {
     var data = encodeMatchUpdate(updates);
     dispatcher.broadcastMessage(1, data.buffer.slice(data.byteOffset));

@@ -83,11 +83,18 @@ export class AdventureEngine {
     return [pixels, items]
   }
 
-  static onboardBeast(state: AdventureState, beastId: number, pixel: number, weapons: [number, number][], attrs?: BeastAttrs) {
+  static onboardBeast(state: AdventureState, beastId: number, pixel: number, weapons: [number, number][], attrs?: BeastAttrs): boolean {
+    // check if pixel empty
+    if (state.pixelBeastMap[pixel]) {
+      // not empty
+      return false
+    }
     // TODO load beast location, equipments, attributes on-chain
     AdventureEngine.executeMove(state, {beastId, pixel})
     state.beastEquipWeaponsMap[beastId] = weapons
     state.beastAttrsMap[beastId] = attrs || { health: 3, moveRange: 4, shootRange: 4 }
+
+    return true
   }
 
   static dropItemOnMap(state: AdventureState, itemId: number, pixel: number): boolean {
@@ -102,7 +109,18 @@ export class AdventureEngine {
     return true
   }
 
-  static proceedActions(state: AdventureState, moves: ActionInfo[], shoots: ActionInfo[]): AdventureUpdate {
+  static proceedDropItem(state: AdventureState, dropItems: ActionInfo[], updates: AdventureUpdate) {
+    for (const action of dropItems) {
+      const { beastId: itemId, pixel } = action
+      const isDropped = AdventureEngine.dropItemOnMap(state, itemId, pixel)
+      if (isDropped) {
+        updates.changedPixels.push(pixel)
+        updates.changedPixelItems.push(itemId)
+      }
+    }
+  }
+
+  static proceedActions(state: AdventureState, moves: ActionInfo[], shoots: ActionInfo[], dropEquipBeasts: number[]): AdventureUpdate {
     const updates: AdventureUpdate = {
       moves: [],
       shoots: [],
@@ -111,6 +129,32 @@ export class AdventureEngine {
       changedBeastEquips: [],
       changedPixels: [],
       changedPixelItems: [],
+    }
+
+    // beasts that have updates (get damage or equips item)
+    const changedBeastSet = new Set<number>()
+
+    const changedPixelSet = new Set<number>()
+
+    // proceed beast drop item
+    for (const beastId of dropEquipBeasts) {
+      // get item
+      const item = state.beastEquipItemMap[beastId]
+      if (!item) continue // no equipping
+
+      // get position
+      const pixel = state.beastPixelMap[beastId]
+      if (pixel === undefined) continue // beast dead
+
+      const isDropped = AdventureEngine.dropItemOnMap(state, item, pixel)
+      if (isDropped) {
+        // unequip beast
+        delete state.beastEquipItemMap[beastId]
+        // add beast to change list
+        changedBeastSet.add(beastId)
+        // add pixel to change list
+        changedPixelSet.add(pixel)
+      }
     }
 
     for (let move of moves) {
@@ -131,9 +175,6 @@ export class AdventureEngine {
       }
     }
 
-    // beasts that have updates (get damage or equips item)
-    const changedBeastSet = new Set<number>()
-
     for (let shoot of shoots) {
       const { beastId, pixel } = shoot
       // check if beastId is alive
@@ -145,14 +186,12 @@ export class AdventureEngine {
       }
     }
 
-    const changedPixels: number[] = []
-
     // check if moved beasts equip item
     for (const move of updates.moves) {
       const beastId = AdventureEngine.tryEquips(state, move.pixel)
       if (beastId >= 0) {
         changedBeastSet.add(beastId)
-        changedPixels.push(move.pixel)
+        changedPixelSet.add(move.pixel)
       }
     }
 
@@ -160,8 +199,8 @@ export class AdventureEngine {
     updates.changedBeastHps = updates.changedBeasts.map(beastId => state.beastAttrsMap[beastId].health)
     updates.changedBeastEquips = updates.changedBeasts.map(beastId => state.beastEquipItemMap[beastId] || 0)
 
-    updates.changedPixels = changedPixels
-    updates.changedPixelItems = changedPixels.map(pixel => state.pixelItemMap[pixel] || 0)
+    updates.changedPixels = Array.from(changedPixelSet)
+    updates.changedPixelItems = updates.changedPixels.map(pixel => state.pixelItemMap[pixel] || 0)
 
     return updates
   }

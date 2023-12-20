@@ -247,6 +247,7 @@ export function matchLoop(
   const onboardMoves: ActionInfo[] = []
 
   const dropItems: ActionInfo[] = []
+  const dropEquipBeasts: number[] = []
 
   messages.forEach((message) => {
       // const msg = JSON.parse(nk.binaryToString(message.data))
@@ -262,12 +263,16 @@ export function matchLoop(
       } else if (message.opCode === 2) {
         logger.info('Onboard beast %v', beastAction)
         // TODO check if onboard beast success
-        AdventureEngine.onboardBeast(state.adventure, beastAction.beastId, beastAction.pixel, [])
-        onboardMoves.push(beastAction)
+        const onboarded = AdventureEngine.onboardBeast(state.adventure, beastAction.beastId, beastAction.pixel, [])
+        if (onboarded) onboardMoves.push(beastAction)
       } else if (message.opCode === 99) {
         logger.info('Drop item %v', beastAction)
         // const isDropped = AdventureEngine.dropItemOnMap(state.adventure, beastAction.beastId, beastAction.pixel)
         dropItems.push(beastAction)
+      } else if (message.opCode === 199) {
+        logger.info('Beast Drop item %v', beastAction)
+        // const isDropped = AdventureEngine.dropItemOnMap(state.adventure, beastAction.beastId, beastAction.pixel)
+        dropEquipBeasts.push(beastAction.beastId)
       }
 
       logger.info('Received action %v', beastAction, message.opCode)
@@ -275,18 +280,19 @@ export function matchLoop(
 
   // update match states and get changes
   // const { executedMoves, executedShoots, beastGone } = matchUpdate(state, moves, shoots)
-  const updates = AdventureEngine.proceedActions(state.adventure, moves, shoots)
+  const updates = AdventureEngine.proceedActions(state.adventure, moves, shoots, dropEquipBeasts)
   updates.moves.push(...onboardMoves)
 
   // process drop items
-  for (const action of dropItems) {
-    const { beastId: itemId, pixel } = action
-    const isDropped = AdventureEngine.dropItemOnMap(state.adventure, itemId, pixel)
-    if (isDropped) {
-      updates.changedPixels.push(pixel)
-      updates.changedPixelItems.push(itemId)
-    }
-  }
+  AdventureEngine.proceedDropItem(state.adventure, dropItems, updates)
+  // for (const action of dropItems) {
+  //   const { beastId: itemId, pixel } = action
+  //   const isDropped = AdventureEngine.dropItemOnMap(state.adventure, itemId, pixel)
+  //   if (isDropped) {
+  //     updates.changedPixels.push(pixel)
+  //     updates.changedPixelItems.push(itemId)
+  //   }
+  // }
 
   if (updates.moves.length || updates.shoots.length || updates.changedBeasts.length || updates.changedPixels.length) {
     const data = encodeMatchUpdate(updates)

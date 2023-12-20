@@ -143,6 +143,7 @@ export class AdventureService {
     // }
 
     // this.client = new Client('defaultkey', 'api.millionpixelland.com', '443', true)
+    // this.socket = this.client.createSocket(true)
     this.client = new Client('defaultkey', '127.0.0.1', '7350', false)
     this.socket = this.client.createSocket(false)
     this.socket.onmatchdata = (matchState) => {
