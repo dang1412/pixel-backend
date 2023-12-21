@@ -142,10 +142,10 @@ export class AdventureService {
     //   console.log('onmessage', msg.data)
     // }
 
-    // this.client = new Client('defaultkey', 'api.millionpixelland.com', '443', true)
-    // this.socket = this.client.createSocket(true)
-    this.client = new Client('defaultkey', '127.0.0.1', '7350', false)
-    this.socket = this.client.createSocket(false)
+    this.client = new Client('defaultkey', 'api.millionpixelland.com', '443', true)
+    this.socket = this.client.createSocket(true)
+    // this.client = new Client('defaultkey', '127.0.0.1', '7350', false)
+    // this.socket = this.client.createSocket(false)
     this.socket.onmatchdata = (matchState) => {
       console.log('matchState', matchState.data)
       const updates = decodeMatchUpdate(matchState.data)
@@ -201,6 +201,12 @@ export class AdventureService {
         this.matchId = match.match_id
         await this.socket.joinMatch(match.match_id)
       }
+    }
+  }
+
+  leaveMatch() {
+    if (this.socket && this.matchId) {
+      this.socket?.leaveMatch(this.matchId)
     }
   }
 

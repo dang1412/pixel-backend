@@ -16,6 +16,13 @@ export function ViewGameWrapper() {
 
   useEffect(() => {
     loadImages()
+
+    return () => {
+      (async () => {
+        const service = (await PixelService.getInstance()).adventureService
+        service.leaveMatch()
+      })()
+    }
   }, [])
 
   const onInitAdventure = useCallback(async (adv: PixelAdventure) => {
