@@ -77,7 +77,9 @@ export class PixelAdventure {
 
     // images
     Assets.add('energy', '/images/energy2.png')
+    Assets.add('saitama-move', '/animations/saitama-move.png')
     Assets.load('energy')
+    Assets.load('saitama-move')
     Assets.load<Spritesheet>('/animations/fire3-0.json')
     Assets.load<Spritesheet>('/animations/explosion1.json')
     Assets.load<Spritesheet>('/animations/strike-0.json')

@@ -6,6 +6,7 @@ export const beastImageMap: {[type: number]: string} = {
   4: '/images/ghost.png',
   5: '/images/amu1.png',
   6: '/images/amu2.png',
+  7: '/animations/saitama-stand.png',
 }
 
 export const itemImages: { [id: number]: string } = {

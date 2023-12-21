@@ -122,7 +122,7 @@ export function ViewDisplayWrapper() {
         <ul className="flex flex-wrap -mb-px">
 
           {tabs.map((t, i) => (
-            <li className='me-2'>
+            <li key={i} className='me-2'>
               <span className={`${tabBaseClass} ${activeIndex === i ? tabActive : tabInactive}`} onClick={() => setActiveIndex(i)}>{t}</span>
             </li>
           ))}

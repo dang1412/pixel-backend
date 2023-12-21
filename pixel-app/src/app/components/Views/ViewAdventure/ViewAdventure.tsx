@@ -19,6 +19,7 @@ const beastImages = [
   '/images/ghost.png',
   '/images/amu1.png',
   '/images/amu2.png',
+  '/animations/saitama-stand.png',
 ]
 
 const itemIds = Object.keys(itemImages).map(id => Number(id)).sort()

@@ -25,6 +25,7 @@ export class PixelCharacter {
 
   // 
   id: number
+  type: number
   name: string
   size: number
   range: number
@@ -41,6 +42,7 @@ export class PixelCharacter {
 
   constructor(public adv: PixelAdventure, public x: number, public y: number, options: CharacterOptions, imageUrl = '/images/ghost.png') {
     this.id = options.id
+    this.type = Math.floor(this.id / 1000000)
     this.name = options.name || `pixelpuppy-${options.id}`
     this.size = options.size || 1
     this.range = options.range || 2
@@ -63,12 +65,13 @@ export class PixelCharacter {
     this.container.addChild(circle)
     this.drawRange()
 
-
     // draw character
     const texture = await Texture.fromURL(imageUrl)
     const character = this.characterDraw
     character.texture = texture
-    const ratio = Math.min(character.width / pixelSize, character.height / pixelSize)
+    
+    // check if saitama type 7
+    const ratio = this.type === 7 ? 15 : Math.min(character.width / pixelSize, character.height / pixelSize)
     character.height = character.height / ratio
     character.width = character.width / ratio
     
@@ -225,26 +228,31 @@ export class PixelCharacter {
     const engine = this.adv.map.engine
     sound.play('move', {volume: 0.5})
     engine.viewport.dirty = true
+    // const curTexture = this.characterDraw.texture
+    // if (this.type === 7) {
+    //   this.characterDraw.texture = Texture.from('saitama-move')
+    // }
     await move(engine, this.container, {x: this.x, y: this.y}, {x: tx, y: ty})
     this.x = tx
     this.y = ty
   }
 
-  private createEnergy(pixelSize: number, type = 0): [Sprite, number, number] {
+  private createEnergy(pixelSize: number, type = 0): [Sprite, number, number, Promise<void>] {
     const energy = new Sprite(Texture.from(type ? 'strike_24.png' : 'energy'))
     energy.width = energy.height = pixelSize
 
     let dx = 0, dy = 0
+    let animatePromise = Promise.resolve()
 
     if (type) {
       energy.width = energy.height = pixelSize * 3
       // energy.anchor.set(0.5, 0.5)
-      this.adv.textureAnimate.animateSprite(energy, 24, 'strike_', 2)
+      animatePromise = this.adv.textureAnimate.animateSprite(energy, 24, 'strike_', 2)
       dx = -1
       dy = -1
     }
 
-    return [energy, dx, dy]
+    return [energy, dx, dy, animatePromise]
   }
 
   async shoot(tx: number, ty: number, type = 0): Promise<void> {
@@ -253,14 +261,22 @@ export class PixelCharacter {
     const scene = this.adv.map.scene
     const pixelSize = scene.options.pixelSize
 
-    const [energy, dx, dy] = this.createEnergy(pixelSize, type)
+    const [energy, dx, dy, animatePromise] = this.createEnergy(pixelSize, type)
 
     // shoot sound
     sound.play('shoot', {volume: 0.4})
 
     scene.getMainContainer().addChild(energy)
     scene.setImagePosition(energy, this.x + dx, this.y + dy)
-    await move(engine, energy, { x: this.x + dx, y: this.y + dy }, {x: tx + dx, y: ty + dy})
+    const movePromise = move(engine, energy, { x: this.x + dx, y: this.y + dy }, {x: tx + dx, y: ty + dy})
+
+    const curTexture = this.characterDraw.texture
+    if (this.type === 7) {
+      this.characterDraw.texture = Texture.from('saitama-move')
+    }
+    await Promise.all([movePromise])
+    this.characterDraw.texture = curTexture
+
     scene.getMainContainer().removeChild(energy)
 
     if (type === 1) {
