@@ -449,9 +449,10 @@ export class EngineViewport {
       const [x, y] = getXY(e)
       const [px, py] = scene.getViewportCoord(x, y)
 
+      // type 'beast', 'item' or 'building'
       const type = e.dataTransfer?.getData('type')
-      if (type === 'beast' || type === 'item') {
-        const id = e.dataTransfer?.getData('id')
+      const id = e.dataTransfer?.getData('id')
+      if (type === 'beast' || type === 'item' || type === 'building') {
         console.log(`drop ${type}`, id, px, py)
         if (id) {
           this.emit(`drop${type}`, Number(id), px, py)

@@ -7,6 +7,7 @@ export const beastImageMap: {[type: number]: string} = {
   5: '/images/amu1.png',
   6: '/images/amu2.png',
   7: '/animations/saitama-stand.png',
+  8: '/animations/venom.png',
 }
 
 export const itemImages: { [id: number]: string } = {
@@ -19,4 +20,10 @@ export const itemWearImages: { [id: number]: string } = {
   1: '/images/bluelight.png',
   2: '/images/aura.png',
   3: '/svgs/car.svg',
+}
+
+export const buildingImages: {[id: number]: string} = {
+  1: '/images/shop.png',
+  2: '/images/hospital.png',
+  3: '/images/manufature.png',
 }

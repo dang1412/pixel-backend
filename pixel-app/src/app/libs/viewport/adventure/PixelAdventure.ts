@@ -2,9 +2,9 @@ import { sound } from '@pixi/sound'
 
 import { PixelMap } from '../PixelMap'
 import { CharacterOptions, PixelCharacter } from './PixelCharacter'
-import { AdventureUpdate, getPixelXYFromIndex } from 'adventure_engine'
+import { AdventureUpdate, PixelArea, getPixelXYFromIndex } from 'adventure_engine'
 import { WORLD_WIDTH } from '../constants'
-import { beastImageMap, itemImages } from './constants'
+import { beastImageMap, buildingImages, itemImages } from './constants'
 import { Assets, Loader, Rectangle, Spritesheet, Texture } from 'pixi.js'
 import { TextureAnimate } from './TextureAnimate'
 
@@ -56,6 +56,23 @@ export class PixelAdventure {
       this.outputCtrl(99, id, pixel)
     })
 
+    engine.on('dropbuilding', (id: number, px: number, py: number) => {
+      // const pixel = this.map.scene.getPixelIndex(px, py)
+      // this.outputCtrl(99, id, pixel)
+      if (this.map.parentMap) {
+        // only drop building on submap
+        // const texture = Texture.from(`building-${id}`)
+        // this.map.scene.addLayerAreaTexture({x: px, y: py, w: 5, h: 5}, texture, 'building')
+        this.map.addImage({
+          area: {x: px, y: py, w: 5, h: 5},
+          imageUrl: buildingImages[id],
+          link: '',
+          title: 'Items Shop',
+          subtitle: 'Craft or trade your item here'
+        })
+      }
+    })
+
     this.load()
   }
 
@@ -78,11 +95,28 @@ export class PixelAdventure {
     // images
     Assets.add('energy', '/images/energy2.png')
     Assets.add('saitama-move', '/animations/saitama-move.png')
+    Assets.add('venom', '/animations/venom.png')
+    Assets.add('venom-fight', '/animations/venom-fight.png')
     Assets.load('energy')
     Assets.load('saitama-move')
+    Assets.load('venom')
+    Assets.load('venom-fight')
     Assets.load<Spritesheet>('/animations/fire3-0.json')
     Assets.load<Spritesheet>('/animations/explosion1.json')
     Assets.load<Spritesheet>('/animations/strike-0.json')
+    Assets.load<Spritesheet>('/animations/smash.json')
+
+    // building images
+    const ids = Object.keys(buildingImages)
+    for (const id of ids) {
+      const image = buildingImages[Number(id)]
+      if (id && image) {
+        const key = `building-${id}`
+        Assets.add(key, image)
+        Assets.load(key)
+        console.log('load', key, image)
+      }
+    }
 
     // Assets.add('strike', '/images/animations/strike.png')
     // const strikeSpriteSheet = await Assets.load<Texture>('strike')

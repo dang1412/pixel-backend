@@ -123,6 +123,13 @@ export const mockImages: PixelImage[] = [
         subtitle: 'BATTLE – HAVE FUN – WIN PRIZES',
         link: 'https://www.mechinfinity.com/en'
       },
+      {
+        area: {x: 12, y: 19, w: 5, h: 5},
+        imageUrl: '/images/shop.png',
+        link: '',
+        title: 'Items Shop',
+        subtitle: 'Craft or trade your item here'
+      }
     ]
   },
   {

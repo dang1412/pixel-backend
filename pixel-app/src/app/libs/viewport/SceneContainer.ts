@@ -312,4 +312,9 @@ export class SceneContainer {
 
     this.viewport.dirty = true
   }
+
+  setSelectingAnchor(x: number, y: number) {
+    const sprite = this.getSelectingSprite()
+    sprite.anchor.set(x, y)
+  }
 }

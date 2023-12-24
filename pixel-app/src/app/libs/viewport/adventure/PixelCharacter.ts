@@ -53,34 +53,18 @@ export class PixelCharacter {
   async setup(imageUrl: string) {
     const scene = this.adv.map.scene
     scene.getMainContainer().addChild(this.container)
+    scene.setSelectingAnchor(0.5, 0.5)
     const pixelSize = scene.options.pixelSize
 
     // draw range
     let circle = this.rangeDraw
-    // circle.beginFill(0x00FF00)  // Color of the circle (red in this example)
-    // circle.drawCircle(pixelSize / 2, pixelSize / 2, pixelSize * (this.range + .5))  // x, y, radius
-    // circle.endFill()
-    // circle.alpha = 0.12
-    // circle.visible = false
     this.container.addChild(circle)
     this.drawRange()
 
-    // draw character
-    const texture = await Texture.fromURL(imageUrl)
-    const character = this.characterDraw
-    character.texture = texture
-    
-    // check if saitama type 7
-    const ratio = this.type === 7 ? 15 : Math.min(character.width / pixelSize, character.height / pixelSize)
-    character.height = character.height / ratio
-    character.width = character.width / ratio
-    
-    // character.x = -(character.width - pixelSize) / 2
-    // character.y = -(character.height - pixelSize) / 2
-    character.anchor.set(0.5, 0.5)
-    character.x = character.y = pixelSize / 2
-    // character.tint = 0xff0000
-    this.container.addChild(character)
+    // draw beast
+    const beast = this.characterDraw
+    this.container.addChild(beast)
+    this.drawBeast(imageUrl)
 
     // draw equip
     const equipDraw = this.equipDraw
@@ -126,8 +110,8 @@ export class PixelCharacter {
         lasty = py
         if (this.isInRange(px, py)) {
           const mode = this.controlMode
-          scene.setSelectingImageTexture(mode === 0 ? texture : Texture.from('energy'), 0.4)
-          scene.selectArea({ x: px, y: py, w: mode === 0 ? character.width / pixelSize : 1, h: mode === 0 ? character.height / pixelSize : 1 })
+          scene.setSelectingImageTexture(mode === 0 ? beast.texture : Texture.from('energy'), 0.4)
+          scene.selectArea({ x: px + 0.5, y: py + 0.5, w: mode === 0 ? beast.width / pixelSize : 1, h: mode === 0 ? beast.height / pixelSize : 1 })
         } else {
           scene.clearSelect()
         }
@@ -154,6 +138,24 @@ export class PixelCharacter {
 
     this.container.on('mousedown', controlstart)
     this.container.on('touchstart', controlstart)
+  }
+
+  async drawBeast(imageUrl: string) {
+    const texture = await Texture.fromURL(imageUrl)
+    const character = this.characterDraw
+    character.texture = texture
+
+    const pixelSize = this.adv.map.scene.options.pixelSize
+    const size = pixelSize * (this.type === 8 ? 3 : this.size)
+
+    // check if venom type 8
+    // const ratio = this.type === 8 ? 6 : Math.min(character.width / pixelSize, character.height / pixelSize)
+    const ratio = Math.min(character.width / size, character.height / size)
+    character.height = character.height / ratio
+    character.width = character.width / ratio
+    
+    character.anchor.set(0.5, 0.5)
+    character.x = character.y = pixelSize / 2
   }
 
   drawHp(hp: number) {
@@ -207,6 +209,12 @@ export class PixelCharacter {
     if (id === 3) {
       equipDraw.y = pixelSize * 4/5
       this.range = 8
+    }
+
+    // venom
+    if (this.type === 8 && (id === 1 || id === 2)) {
+      equipDraw.width = pixelSize * 4
+      equipDraw.height = pixelSize * 3.5
     }
 
     this.drawRange()
@@ -273,6 +281,8 @@ export class PixelCharacter {
     const curTexture = this.characterDraw.texture
     if (this.type === 7) {
       this.characterDraw.texture = Texture.from('saitama-move')
+    } else if (this.type === 8) {
+      this.characterDraw.texture = Texture.from('venom-fight')
     }
     await Promise.all([movePromise])
     this.characterDraw.texture = curTexture
@@ -284,6 +294,9 @@ export class PixelCharacter {
       sound.play('explode1', {volume: 0.4})
     } else if (type === 2) {
       this.adv.textureAnimate.animate({x: tx, y: ty, w: 5, h: 5}, 48, 'flame_')
+      sound.play('explode2', {volume: 0.4})
+    } else if (type === 3) {
+      this.adv.textureAnimate.animate({ x: tx + 0.5, y: ty - 1, w: 9, h: 9 }, 30, 'smash_', 2)
       sound.play('explode2', {volume: 0.4})
     }
   }
