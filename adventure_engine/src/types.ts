@@ -30,9 +30,21 @@ export interface VehicleAttrs {
 }
 
 export interface BeastAttrs {
-  health?: number
+  hp?: number
+  maxHp?: number
   moveRange?: number
   shootRange?: number
+  w?: number
+  h?: number
+}
+
+export const defaultBeastAttrs: BeastAttrs = {
+  hp: 3,
+  maxHp: 3,
+  moveRange: 4,
+  shootRange: 4,
+  w: 1,
+  h: 1,
 }
 
 export interface AdventureUpdate {
@@ -50,6 +62,8 @@ export interface AdventureUpdate {
 export interface AdventureState {
   // beast_id => attributes
   beastAttrsMap: { [id: number]: BeastAttrs } // number, BeastAttrs>
+  // beast type_id => attributes
+  beastTypeAttrsMap: { [id: number]: BeastAttrs }
   // beast_id => pixel map
   beastPixelMap: { [id: number]: number } // Map<number, number>
   // pixel => beast_id map
