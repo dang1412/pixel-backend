@@ -141,12 +141,12 @@ export class PixelCharacter {
   }
 
   async drawBeast(imageUrl: string) {
-    const texture = await Texture.fromURL(imageUrl)
+    const texture = Texture.from(imageUrl)
     const character = this.characterDraw
     character.texture = texture
 
     const pixelSize = this.adv.map.scene.options.pixelSize
-    const size = pixelSize * (this.type === 8 ? 3 : this.size)
+    const size = pixelSize * (this.type >= 8 ? 3 : this.size)
 
     // check if venom type 8
     // const ratio = this.type === 8 ? 6 : Math.min(character.width / pixelSize, character.height / pixelSize)
@@ -198,7 +198,7 @@ export class PixelCharacter {
     const pixelSize = this.adv.map.scene.options.pixelSize
 
     const image = itemWearImages[id]
-    equipDraw.texture = image ? await Texture.fromURL(image) : Texture.EMPTY
+    equipDraw.texture = image ? Texture.from(image) : Texture.EMPTY
     equipDraw.width = pixelSize * 1.5
     equipDraw.height = pixelSize * 1.5
     equipDraw.x = equipDraw.y = pixelSize / 2

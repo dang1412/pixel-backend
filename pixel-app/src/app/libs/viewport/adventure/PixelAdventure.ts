@@ -4,7 +4,7 @@ import { PixelMap } from '../PixelMap'
 import { CharacterOptions, PixelCharacter } from './PixelCharacter'
 import { AdventureUpdate, PixelArea, getPixelXYFromIndex } from 'adventure_engine'
 import { WORLD_WIDTH } from '../constants'
-import { beastImageMap, buildingImages, itemImages } from './constants'
+import { ALL_IMAGES, beastImageMap, buildingImages, itemImages } from './constants'
 import { Assets, Loader, Rectangle, Spritesheet, Texture } from 'pixi.js'
 import { TextureAnimate } from './TextureAnimate'
 
@@ -93,25 +93,26 @@ export class PixelAdventure {
     sound.add('explode2', '/sounds/explosion4.mp3')
 
     // images
-    Assets.add('energy', '/images/energy2.png')
-    Assets.add('saitama-move', '/animations/saitama-move.png')
-    Assets.add('venom', '/animations/venom.png')
-    Assets.add('venom-fight', '/animations/venom-fight.png')
-    Assets.load('energy')
-    Assets.load('saitama-move')
-    Assets.load('venom')
-    Assets.load('venom-fight')
+    // Assets.add('energy', '/images/energy2.png')
+    // Assets.add('saitama-move', '/animations/saitama-move.png')
+    // Assets.add('venom', '/animations/venom.png')
+    // Assets.add('venom-fight', '/animations/venom-fight.png')
+    // Assets.add('auraflame', '/images/auraflame.png')
+    // Assets.load('energy')
+    // Assets.load('saitama-move')
+    // Assets.load('venom')
+    // Assets.load('venom-fight')
+    // Assets.load('auraflame')
     Assets.load<Spritesheet>('/animations/fire3-0.json')
     Assets.load<Spritesheet>('/animations/explosion1.json')
     Assets.load<Spritesheet>('/animations/strike-0.json')
     Assets.load<Spritesheet>('/animations/smash.json')
 
     // building images
-    const ids = Object.keys(buildingImages)
-    for (const id of ids) {
-      const image = buildingImages[Number(id)]
-      if (id && image) {
-        const key = `building-${id}`
+    const keys = Object.keys(ALL_IMAGES)
+    for (const key of keys) {
+      const image = ALL_IMAGES[key]
+      if (key && image) {
         Assets.add(key, image)
         Assets.load(key)
         console.log('load', key, image)
