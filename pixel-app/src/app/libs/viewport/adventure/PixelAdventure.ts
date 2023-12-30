@@ -95,15 +95,18 @@ export class PixelAdventure {
     Assets.load<Spritesheet>('/animations/strike-0.json')
     Assets.load<Spritesheet>('/animations/smash.json')
 
-    // building images
+    // load all images
     const keys = Object.keys(ALL_IMAGES)
     for (const key of keys) {
       const image = ALL_IMAGES[key]
       if (key && image) {
-        Assets.add(key, image)
-        Assets.load(key)
-        console.log('load', key, image)
+        Assets.add({alias: key, src: image})
       }
+    }
+
+    for (const key of keys) {
+      Assets.load(key)
+      console.log('load', key)
     }
 
     // Assets.add('strike', '/images/animations/strike.png')

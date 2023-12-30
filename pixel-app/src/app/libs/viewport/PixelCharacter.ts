@@ -7,7 +7,7 @@ import { EngineViewport } from './EngineViewport'
 import { sound } from '@pixi/sound'
 import { PixelGameMap } from './PixelGameMap'
 
-const energyTexture = Texture.fromURL('/images/energy2.png')
+// const energyTexture = Texture.fromURL('/images/energy2.png')
 
 export interface CharacterOptions {
   name: string
@@ -102,7 +102,7 @@ export class PixelCharacter {
 
   async shoot(tx: number, ty: number): Promise<void> {
     const energy = new Sprite()
-    energy.texture = await energyTexture
+    // energy.texture = await energyTexture
 
     const engine = this.gameMap.map.engine
     const scene = this.gameMap.map.scene

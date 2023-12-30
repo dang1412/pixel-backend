@@ -1,8 +1,8 @@
-import { Container, Graphics, RenderTexture, Renderer, Sprite } from 'pixi.js'
+import { Container, Renderer } from 'pixi.js'
 
 import { SceneContainer } from './SceneContainer'
 import { Viewport } from 'pixi-viewport'
-import { PixelArea, PixelPoint } from './types'
+import { PixelArea } from './types'
 import { Minimap } from './Minimap'
 
 export type OnMouseMoveFunc = (mx: number, my: number, px: number, py: number) => void
@@ -14,10 +14,6 @@ export interface GameEngineOpts {
   width: number
   height: number
   minPixelSize?: number
-  // onMouseMove?: OnMouseMoveFunc
-  // onClick?: OnClickFunc
-  // onSelect?: OnSelectFunc
-  // onControl?: OnControlFunc
 }
 
 export class EngineViewport {
@@ -154,22 +150,6 @@ export class EngineViewport {
     }
   }
 
-  // setOnMouseMove(onMouseMove: OnMouseMoveFunc) {
-  //   this.options.onMouseMove = onMouseMove
-  // }
-
-  // setOnSelect(onSelect: OnSelectFunc) {
-  //   this.options.onSelect = onSelect
-  // }
-
-  // setOnClick(onClick: OnClickFunc) {
-  //   this.options.onClick = onClick
-  // }
-
-  // setOnControl(onControl: OnControlFunc) {
-  //   this.options.onControl = onControl
-  // }
-
   setDragOrSelectMode(mode: 0 | 1 | 2) {
     this.dragOrSelectMode = mode
     this.updateViewportDragMode()
@@ -207,15 +187,6 @@ export class EngineViewport {
 
     return index
   }
-
-  // async addImageURL(area: PixelArea, imageURL: string, layer = 'image'): Promise<Sprite> {
-  //   const scene = this.getCurrentScene()
-  //   const sprite = await scene.addImageURL(area, imageURL, layer)
-
-  //   this.updateMinimap()
-
-  //   return sprite
-  // }
 
   switchScene(index: number) {
     if (index === this.activeSceneIndex) { return }
@@ -284,9 +255,6 @@ export class EngineViewport {
     if (!scene) { return }
 
     const { x, y, w, h } = area
-    // if (this.options.onSelect) {
-    //   this.options.onSelect(mx, my, x, y, x + w - 1, y + h - 1)
-    // }
     this.emit('select', mx, my, x, y, x + w - 1, y + h - 1)
   }
 
