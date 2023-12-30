@@ -10,6 +10,7 @@ export const ALL_IMAGES: {[key: string]: string} = {
   'saitama-stand': '/animations/saitama-stand.png',
   'saitama-move': '/animations/saitama-move.png',
   'venom': '/animations/venom.png',
+  'venom-fight': '/animations/venom-fight.png',
   'goku': '/images/goku-ultra.png',
 
   // shoot

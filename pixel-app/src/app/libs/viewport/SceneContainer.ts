@@ -109,10 +109,11 @@ export class SceneContainer {
     const x = Math.min(px1, px2)
     const y = Math.min(py1, py2)
 
-  
-    this.selectArea({x, y, w: Math.abs(px2 - px1) + 1, h: Math.abs(py2 - py1) + 1})
+    const w = Math.abs(px2 - px1) + 1
+    const h = Math.abs(py2 - py1) + 1
+    this.selectArea({x, y, w, h})
 
-    return [px1, py1, px2, py2]
+    return [x, y, x + w - 1, y + h - 1]
   }
 
   selectArea(area: PixelArea) {
