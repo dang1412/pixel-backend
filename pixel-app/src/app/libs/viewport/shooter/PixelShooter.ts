@@ -72,6 +72,43 @@ const manifest: AssetsManifest = {
         },
       ],
     },
+    {
+      name: 'man-hit-knife',
+      assets: [
+        {
+          alias: 'man_hit_knife_0',
+          src: '/shooter/Knife/Knife_000.png'
+        },
+        {
+          alias: 'man_hit_knife_1',
+          src: '/shooter/Knife/Knife_001.png'
+        },
+        {
+          alias: 'man_hit_knife_2',
+          src: '/shooter/Knife/Knife_002.png'
+        },
+        {
+          alias: 'man_hit_knife_3',
+          src: '/shooter/Knife/Knife_003.png'
+        },
+        {
+          alias: 'man_hit_knife_4',
+          src: '/shooter/Knife/Knife_004.png'
+        },
+        {
+          alias: 'man_hit_knife_5',
+          src: '/shooter/Knife/Knife_005.png'
+        },
+        {
+          alias: 'man_hit_knife_6',
+          src: '/shooter/Knife/Knife_006.png'
+        },
+        {
+          alias: 'man_hit_knife_7',
+          src: '/shooter/Knife/Knife_007.png'
+        },
+      ]
+    }
   ]
 }
 
@@ -85,6 +122,7 @@ export class PixelShooter {
     Assets.init({ manifest })
     await Assets.loadBundle('man-idle-knife')
     await Assets.loadBundle('man-walk-knife')
+    await Assets.loadBundle('man-hit-knife')
 
     // await Assets.load<Spritesheet>('/sho*}{_oter/Walk_knife/walk_knife.json')
 
