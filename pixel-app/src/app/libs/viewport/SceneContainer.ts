@@ -1,7 +1,7 @@
 import { Renderer, Sprite, Texture, BaseTexture, Container } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
 
-import { drawViewportGrid, getPixelIndex, getPixelIndexesFromArea, getPixelXYFromIndex, getViewportCoord } from './utils'
+import { drawViewportGrid, getCanvasXY, getPixelIndex, getPixelIndexesFromArea, getPixelXYFromIndex, getViewportCoord } from './utils'
 import { PixelArea } from './types'
 
 export interface SceneViewportOpts {
@@ -155,9 +155,16 @@ export class SceneContainer {
 
   getViewportCoord(x: number, y: number): [number, number] {
     const { pixelSize, worldWidthPixel, worldHeightPixel } = this.options
-    const [xc, yc] = getViewportCoord(this.viewport, pixelSize, worldWidthPixel, worldHeightPixel, x, y)
+    const [px, py] = getViewportCoord(this.viewport, pixelSize, worldWidthPixel, worldHeightPixel, x, y)
 
-    return [xc, yc]
+    return [px, py]
+  }
+
+  getCanvasXY(px: number, py: number): [number, number] {
+    const { pixelSize } = this.options
+    const [cx, cy] = getCanvasXY(this.viewport, pixelSize, px, py)
+
+    return [cx, cy]
   }
 
   getPixelIndex(x: number, y: number): number {

@@ -6,26 +6,33 @@ export function getViewportCoord(viewport: Viewport, pixelSize: number, worldWid
 
   let outside = false
 
-  let xCoord = Math.floor(wx / pixelSize)
-  let yCoord = Math.floor(wy / pixelSize)
+  let px = Math.floor(wx / pixelSize)
+  let py = Math.floor(wy / pixelSize)
 
-  if (xCoord < 0) {
-    xCoord = 0
+  if (px < 0) {
+    px = 0
     outside = true
   }
-  if (xCoord >= worldWidthPixel) {
-    xCoord = worldWidthPixel - 1
-    outside = true
-  }
-
-  if (yCoord < 0) {
-    yCoord = 0
-    outside = true
-  }
-  if (yCoord >= worldHeightPixel) {
-    yCoord = worldHeightPixel - 1
+  if (px >= worldWidthPixel) {
+    px = worldWidthPixel - 1
     outside = true
   }
 
-  return [xCoord, yCoord, outside]
+  if (py < 0) {
+    py = 0
+    outside = true
+  }
+  if (py >= worldHeightPixel) {
+    py = worldHeightPixel - 1
+    outside = true
+  }
+
+  return [px, py, outside]
+}
+
+export function getCanvasXY(viewport: Viewport, pixelSize: number, px: number, py: number): [number, number] {
+  const cx = (px * pixelSize - viewport.left) * viewport.scaled
+  const cy = (py * pixelSize - viewport.top) * viewport.scaled
+
+  return [cx, cy]
 }
