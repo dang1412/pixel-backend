@@ -2,115 +2,164 @@ import { AnimatedSprite, Assets, AssetsManifest, Container, Sprite, Spritesheet,
 
 import { PixelMap } from '../PixelMap'
 import { Shooter } from './Shooter'
+import { manifest } from './constants'
 
 // Manifest Example
-const manifest: AssetsManifest = {
-  bundles: [
-    {
-      name: 'man-idle-knife',
-      assets: [
-        {
-          alias: 'man_idle_knife_0',
-          src: '/shooter/Idle_knife/Idle_knife_000.png',
-        },
-        {
-          alias: 'man_idle_knife_1',
-          src: '/shooter/Idle_knife/Idle_knife_001.png',
-        },
-        {
-          alias: 'man_idle_knife_2',
-          src: '/shooter/Idle_knife/Idle_knife_002.png',
-        },
-        {
-          alias: 'man_idle_knife_3',
-          src: '/shooter/Idle_knife/Idle_knife_003.png',
-        },
-        {
-          alias: 'man_idle_knife_4',
-          src: '/shooter/Idle_knife/Idle_knife_004.png',
-        },
-        {
-          alias: 'man_idle_knife_5',
-          src: '/shooter/Idle_knife/Idle_knife_005.png',
-        },
-        {
-          alias: 'man_idle_knife_6',
-          src: '/shooter/Idle_knife/Idle_knife_006.png',
-        },
-        {
-          alias: 'man_idle_knife_7',
-          src: '/shooter/Idle_knife/Idle_knife_007.png',
-        },
-      ]
-    },
-    {
-      name: 'man-walk-knife',
-      assets: [
-        {
-          alias: 'man_walk_knife_0',
-          src: '/shooter/Walk_knife/Walk_knife_000.png',
-        },
-        {
-          alias: 'man_walk_knife_1',
-          src: '/shooter/Walk_knife/Walk_knife_001.png',
-        },
-        {
-          alias: 'man_walk_knife_2',
-          src: '/shooter/Walk_knife/Walk_knife_002.png',
-        },
-        {
-          alias: 'man_walk_knife_3',
-          src: '/shooter/Walk_knife/Walk_knife_003.png',
-        },
-        {
-          alias: 'man_walk_knife_4',
-          src: '/shooter/Walk_knife/Walk_knife_004.png',
-        },
-        {
-          alias: 'man_walk_knife_5',
-          src: '/shooter/Walk_knife/Walk_knife_005.png',
-        },
-      ],
-    },
-    {
-      name: 'man-hit-knife',
-      assets: [
-        {
-          alias: 'man_hit_knife_0',
-          src: '/shooter/Knife/Knife_000.png'
-        },
-        {
-          alias: 'man_hit_knife_1',
-          src: '/shooter/Knife/Knife_001.png'
-        },
-        {
-          alias: 'man_hit_knife_2',
-          src: '/shooter/Knife/Knife_002.png'
-        },
-        {
-          alias: 'man_hit_knife_3',
-          src: '/shooter/Knife/Knife_003.png'
-        },
-        {
-          alias: 'man_hit_knife_4',
-          src: '/shooter/Knife/Knife_004.png'
-        },
-        {
-          alias: 'man_hit_knife_5',
-          src: '/shooter/Knife/Knife_005.png'
-        },
-        {
-          alias: 'man_hit_knife_6',
-          src: '/shooter/Knife/Knife_006.png'
-        },
-        {
-          alias: 'man_hit_knife_7',
-          src: '/shooter/Knife/Knife_007.png'
-        },
-      ]
-    }
-  ]
-}
+// const manifest: AssetsManifest = {
+//   bundles: [
+//     {
+//       name: 'man-idle-knife',
+//       assets: [
+//         {
+//           alias: 'man_idle_knife_0',
+//           src: '/shooter/Idle_knife/Idle_knife_000.png',
+//         },
+//         {
+//           alias: 'man_idle_knife_1',
+//           src: '/shooter/Idle_knife/Idle_knife_001.png',
+//         },
+//         {
+//           alias: 'man_idle_knife_2',
+//           src: '/shooter/Idle_knife/Idle_knife_002.png',
+//         },
+//         {
+//           alias: 'man_idle_knife_3',
+//           src: '/shooter/Idle_knife/Idle_knife_003.png',
+//         },
+//         {
+//           alias: 'man_idle_knife_4',
+//           src: '/shooter/Idle_knife/Idle_knife_004.png',
+//         },
+//         {
+//           alias: 'man_idle_knife_5',
+//           src: '/shooter/Idle_knife/Idle_knife_005.png',
+//         },
+//         {
+//           alias: 'man_idle_knife_6',
+//           src: '/shooter/Idle_knife/Idle_knife_006.png',
+//         },
+//         {
+//           alias: 'man_idle_knife_7',
+//           src: '/shooter/Idle_knife/Idle_knife_007.png',
+//         },
+//       ]
+//     },
+//     {
+//       name: 'man-walk-knife',
+//       assets: [
+//         {
+//           alias: 'man_walk_knife_0',
+//           src: '/shooter/Walk_knife/Walk_knife_000.png',
+//         },
+//         {
+//           alias: 'man_walk_knife_1',
+//           src: '/shooter/Walk_knife/Walk_knife_001.png',
+//         },
+//         {
+//           alias: 'man_walk_knife_2',
+//           src: '/shooter/Walk_knife/Walk_knife_002.png',
+//         },
+//         {
+//           alias: 'man_walk_knife_3',
+//           src: '/shooter/Walk_knife/Walk_knife_003.png',
+//         },
+//         {
+//           alias: 'man_walk_knife_4',
+//           src: '/shooter/Walk_knife/Walk_knife_004.png',
+//         },
+//         {
+//           alias: 'man_walk_knife_5',
+//           src: '/shooter/Walk_knife/Walk_knife_005.png',
+//         },
+//       ],
+//     },
+//     {
+//       name: 'man-hit-knife',
+//       assets: [
+//         {
+//           alias: 'man_hit_knife_0',
+//           src: '/shooter/Knife/Knife_000.png'
+//         },
+//         {
+//           alias: 'man_hit_knife_1',
+//           src: '/shooter/Knife/Knife_001.png'
+//         },
+//         {
+//           alias: 'man_hit_knife_2',
+//           src: '/shooter/Knife/Knife_002.png'
+//         },
+//         {
+//           alias: 'man_hit_knife_3',
+//           src: '/shooter/Knife/Knife_003.png'
+//         },
+//         {
+//           alias: 'man_hit_knife_4',
+//           src: '/shooter/Knife/Knife_004.png'
+//         },
+//         {
+//           alias: 'man_hit_knife_5',
+//           src: '/shooter/Knife/Knife_005.png'
+//         },
+//         {
+//           alias: 'man_hit_knife_6',
+//           src: '/shooter/Knife/Knife_006.png'
+//         },
+//         {
+//           alias: 'man_hit_knife_7',
+//           src: '/shooter/Knife/Knife_007.png'
+//         },
+//       ]
+//     }
+//   ]
+// }
+
+// const manifest: AssetsManifest = {
+//   bundles: [
+//     {
+//       name: 'man-idle-knife',
+//       assets: {
+//         'man_idle_knife_0': '/shooter/Idle_knife/Idle_knife_000.png',
+//         'man_idle_knife_1': '/shooter/Idle_knife/Idle_knife_001.png',
+//         'man_idle_knife_2': '/shooter/Idle_knife/Idle_knife_002.png',
+//         'man_idle_knife_3': '/shooter/Idle_knife/Idle_knife_003.png',
+//         'man_idle_knife_4': '/shooter/Idle_knife/Idle_knife_004.png',
+//         'man_idle_knife_5': '/shooter/Idle_knife/Idle_knife_005.png',
+//         'man_idle_knife_6': '/shooter/Idle_knife/Idle_knife_006.png',
+//         'man_idle_knife_7': '/shooter/Idle_knife/Idle_knife_007.png',
+//       }
+//     },
+//     {
+//       name: 'man-walk-knife',
+//       assets: {
+//         'man_walk_knife_0': '/shooter/Walk_knife/Walk_knife_000.png',
+//         'man_walk_knife_1': '/shooter/Walk_knife/Walk_knife_001.png',
+//         'man_walk_knife_2': '/shooter/Walk_knife/Walk_knife_002.png',
+//         'man_walk_knife_3': '/shooter/Walk_knife/Walk_knife_003.png',
+//         'man_walk_knife_4': '/shooter/Walk_knife/Walk_knife_004.png',
+//         'man_walk_knife_5': '/shooter/Walk_knife/Walk_knife_005.png',
+//       }
+//     },
+//     {
+//       name: 'man-hit-knife',
+//       assets: {
+//         'man_hit_knife_0': '/shooter/Knife/Knife_000.png',
+//         'man_hit_knife_1': '/shooter/Knife/Knife_001.png',
+//         'man_hit_knife_2': '/shooter/Knife/Knife_002.png',
+//         'man_hit_knife_3': '/shooter/Knife/Knife_003.png',
+//         'man_hit_knife_4': '/shooter/Knife/Knife_004.png',
+//         'man_hit_knife_5': '/shooter/Knife/Knife_005.png',
+//         'man_hit_knife_6': '/shooter/Knife/Knife_006.png',
+//         'man_hit_knife_7': '/shooter/Knife/Knife_007.png',
+//       }
+//     },
+//     {
+//       name: 'sample',
+//       assets: {
+
+//       }
+//     }
+//   ]
+// }
 
 export class PixelShooter {
   constructor(public map: PixelMap) {
@@ -123,6 +172,9 @@ export class PixelShooter {
     await Assets.loadBundle('man-idle-knife')
     await Assets.loadBundle('man-walk-knife')
     await Assets.loadBundle('man-hit-knife')
+    await Assets.loadBundle('man-idle-gun')
+    await Assets.loadBundle('man-walk-gun')
+    await Assets.loadBundle('man-hit-gun')
 
     // await Assets.load<Spritesheet>('/sho*}{_oter/Walk_knife/walk_knife.json')
 

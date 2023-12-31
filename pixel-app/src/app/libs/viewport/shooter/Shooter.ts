@@ -2,12 +2,15 @@ import { Container } from 'pixi.js'
 
 import { PixelMap } from '../PixelMap'
 import { AnimatedSprite } from './AnimatedSprite'
+import { characterStates } from './constants'
 
 export class Shooter {
 
   container = new Container()
   keysPressed: { [key: string]: boolean } = {}
   speed = 0.06
+  weapon = 'gun'
+  gender = 'man'
 
   constructor(public map: PixelMap, public x: number, public y: number) {
     this.init()
@@ -19,37 +22,8 @@ export class Shooter {
     const container = this.container
     scene.getMainContainer().addChild(container)
 
-    const char = new AnimatedSprite({
-      'idle_knife': [
-        'man_idle_knife_0',
-        'man_idle_knife_1',
-        'man_idle_knife_2',
-        'man_idle_knife_3',
-        'man_idle_knife_4',
-        'man_idle_knife_5',
-        'man_idle_knife_6',
-        'man_idle_knife_7',
-      ],
-      'walk_knife': [
-        'man_walk_knife_0',
-        'man_walk_knife_1',
-        'man_walk_knife_2',
-        'man_walk_knife_3',
-        'man_walk_knife_4',
-        'man_walk_knife_5',
-      ],
-      'hit_knife': [
-        'man_hit_knife_0',
-        'man_hit_knife_1',
-        'man_hit_knife_2',
-        'man_hit_knife_3',
-        'man_hit_knife_4',
-        'man_hit_knife_5',
-        'man_hit_knife_6',
-        'man_hit_knife_7',
-      ],
-    })
-    
+    const char = new AnimatedSprite(characterStates)
+
     container.addChild(char.sprite)
     scene.setImagePosition(container, this.x, this.y, 1, 1)
 
@@ -101,11 +75,11 @@ export class Shooter {
 
       let hitting = this.keysPressed['f']
       if (hitting) {
-        char.switchOnce('hit_knife', 0.04)
+        char.switchOnce(`man-hit-${this.weapon}`, 0.04)
       } else if (moving) {
-        char.switch('walk_knife')
+        char.switch(`man-walk-${this.weapon}`)
       } else {
-        char.switch('idle_knife')
+        char.switch(`man-idle-${this.weapon}`)
       }
 
       if (moving) this.updatePos()
