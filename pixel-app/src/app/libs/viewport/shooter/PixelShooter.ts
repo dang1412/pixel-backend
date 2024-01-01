@@ -175,6 +175,12 @@ export class PixelShooter {
     await Assets.loadBundle('man-idle-gun')
     await Assets.loadBundle('man-walk-gun')
     await Assets.loadBundle('man-hit-gun')
+    await Assets.loadBundle('man-idle-riffle')
+    await Assets.loadBundle('man-walk-riffle')
+    await Assets.loadBundle('man-hit-riffle')
+    await Assets.loadBundle('man-idle-bat')
+    await Assets.loadBundle('man-walk-bat')
+    await Assets.loadBundle('man-hit-bat')
 
     // await Assets.load<Spritesheet>('/sho*}{_oter/Walk_knife/walk_knife.json')
 

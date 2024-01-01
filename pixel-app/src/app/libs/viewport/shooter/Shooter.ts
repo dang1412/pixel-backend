@@ -9,7 +9,7 @@ export class Shooter {
   container = new Container()
   keysPressed: { [key: string]: boolean } = {}
   speed = 0.06
-  weapon = 'gun'
+  weapon: 'knife' | 'gun' | 'riffle' | 'bat' = 'riffle'
   gender = 'man'
 
   constructor(public map: PixelMap, public x: number, public y: number) {
@@ -49,6 +49,15 @@ export class Shooter {
       // if (e.key === 'f') {
       //   char.switch('hit_knife')
       // }
+      if (e.key === '1') {
+        this.weapon = 'knife'
+      } else if (e.key === '2') {
+        this.weapon = 'gun'
+      } else if (e.key === '3') {
+        this.weapon = 'riffle'
+      } else if (e.key === '4') {
+        this.weapon = 'bat'
+      }
     })
     document.addEventListener('keyup', (e) => {
       this.keysPressed[e.key] = false

@@ -74,6 +74,85 @@ export const manifest: AssetsManifest = {
       }
     },
     {
+      name: 'man-idle-riffle',
+      assets: {
+        'man_idle_riffle_0': '/shooter/Idle_riffle/Idle_riffle_000.png',
+        'man_idle_riffle_1': '/shooter/Idle_riffle/Idle_riffle_001.png',
+        'man_idle_riffle_2': '/shooter/Idle_riffle/Idle_riffle_002.png',
+        'man_idle_riffle_3': '/shooter/Idle_riffle/Idle_riffle_003.png',
+        'man_idle_riffle_4': '/shooter/Idle_riffle/Idle_riffle_004.png',
+        'man_idle_riffle_5': '/shooter/Idle_riffle/Idle_riffle_005.png',
+        'man_idle_riffle_6': '/shooter/Idle_riffle/Idle_riffle_006.png',
+        'man_idle_riffle_7': '/shooter/Idle_riffle/Idle_riffle_007.png',
+      }
+    },
+    {
+      name: 'man-walk-riffle',
+      assets: {
+        'man_walk_riffle_0': '/shooter/Walk_riffle/Walk_riffle_000.png',
+        'man_walk_riffle_1': '/shooter/Walk_riffle/Walk_riffle_001.png',
+        'man_walk_riffle_2': '/shooter/Walk_riffle/Walk_riffle_002.png',
+        'man_walk_riffle_3': '/shooter/Walk_riffle/Walk_riffle_003.png',
+        'man_walk_riffle_4': '/shooter/Walk_riffle/Walk_riffle_004.png',
+        'man_walk_riffle_5': '/shooter/Walk_riffle/Walk_riffle_005.png',
+      }
+    },
+    {
+      name: 'man-hit-riffle',
+      assets: {
+        'man_hit_riffle_0': '/shooter/Riffle/Riffle_000.png',
+        'man_hit_riffle_1': '/shooter/Riffle/Riffle_001.png',
+        'man_hit_riffle_2': '/shooter/Riffle/Riffle_002.png',
+        'man_hit_riffle_3': '/shooter/Riffle/Riffle_003.png',
+        'man_hit_riffle_4': '/shooter/Riffle/Riffle_004.png',
+        'man_hit_riffle_5': '/shooter/Riffle/Riffle_005.png',
+        'man_hit_riffle_6': '/shooter/Riffle/Riffle_006.png',
+        'man_hit_riffle_7': '/shooter/Riffle/Riffle_007.png',
+        'man_hit_riffle_8': '/shooter/Riffle/Riffle_008.png',
+      }
+    },
+    {
+      name: 'man-idle-bat',
+      assets: {
+        'man_idle_bat_0': '/shooter/Idle_bat/Idle_Bat_000.png',
+        'man_idle_bat_1': '/shooter/Idle_bat/Idle_Bat_001.png',
+        'man_idle_bat_2': '/shooter/Idle_bat/Idle_Bat_002.png',
+        'man_idle_bat_3': '/shooter/Idle_bat/Idle_Bat_003.png',
+        'man_idle_bat_4': '/shooter/Idle_bat/Idle_Bat_004.png',
+        'man_idle_bat_5': '/shooter/Idle_bat/Idle_Bat_005.png',
+        'man_idle_bat_6': '/shooter/Idle_bat/Idle_Bat_006.png',
+        'man_idle_bat_7': '/shooter/Idle_bat/Idle_Bat_007.png',
+      }
+    },
+    {
+      name: 'man-walk-bat',
+      assets: {
+        'man_walk_bat_0': '/shooter/Walk_bat/Walk_bat_000.png',
+        'man_walk_bat_1': '/shooter/Walk_bat/Walk_bat_001.png',
+        'man_walk_bat_2': '/shooter/Walk_bat/Walk_bat_002.png',
+        'man_walk_bat_3': '/shooter/Walk_bat/Walk_bat_003.png',
+        'man_walk_bat_4': '/shooter/Walk_bat/Walk_bat_004.png',
+        'man_walk_bat_5': '/shooter/Walk_bat/Walk_bat_005.png',
+      }
+    },
+    {
+      name: 'man-hit-bat',
+      assets: {
+        'man_hit_bat_0': '/shooter/Bat/Bat_000.png',
+        'man_hit_bat_1': '/shooter/Bat/Bat_001.png',
+        'man_hit_bat_2': '/shooter/Bat/Bat_002.png',
+        'man_hit_bat_3': '/shooter/Bat/Bat_003.png',
+        'man_hit_bat_4': '/shooter/Bat/Bat_004.png',
+        'man_hit_bat_5': '/shooter/Bat/Bat_005.png',
+        'man_hit_bat_6': '/shooter/Bat/Bat_006.png',
+        'man_hit_bat_7': '/shooter/Bat/Bat_007.png',
+        'man_hit_bat_8': '/shooter/Bat/Bat_008.png',
+        'man_hit_bat_9': '/shooter/Bat/Bat_009.png',
+        // 'man_hit_bat_10': '/shooter/Bat/Bat_010.png',
+        // 'man_hit_bat_11': '/shooter/Bat/Bat_011.png',
+      }
+    },
+    {
       name: 'sample',
       assets: {
 
