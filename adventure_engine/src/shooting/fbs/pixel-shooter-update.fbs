@@ -1,0 +1,17 @@
+struct CharacterAttrsFbs {
+  hp: ubyte;
+  angle: short;
+  weapon: ubyte;
+  x: short;
+  y: short;
+}
+
+table PixelShooterUpdatesFbs {
+  update_ids: [short];
+  updates: [CharacterAttrsFbs];
+  fire_ids: [short];
+  dead_ids: [short];
+}
+
+// Define the root type.
+root_type PixelShooterUpdatesFbs;
