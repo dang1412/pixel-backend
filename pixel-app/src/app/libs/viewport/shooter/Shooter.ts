@@ -3,16 +3,28 @@ import { Container } from 'pixi.js'
 import { PixelMap } from '../PixelMap'
 import { AnimatedSprite } from './AnimatedSprite'
 import { characterStates } from './constants'
+import { CharacterAttrs, CharacterControl } from 'adventure_engine/dist/shooting'
+
+const weapons = ['', 'knife', 'gun', 'riffle', 'bat']
 
 export class Shooter {
 
   container = new Container()
   keysPressed: { [key: string]: boolean } = {}
-  speed = 0.06
-  weapon: 'knife' | 'gun' | 'riffle' | 'bat' = 'riffle'
+  speed = 2
+  // weapon: 'knife' | 'gun' | 'riffle' | 'bat' = 'riffle'
   gender = 'man'
 
-  constructor(public map: PixelMap, public x: number, public y: number) {
+  char: AnimatedSprite
+
+  ctrl: CharacterControl
+
+  private lastX = 0
+  private lastY = 0
+
+  constructor(public map: PixelMap, public id: number, public attrs: CharacterAttrs) {
+    this.char = new AnimatedSprite(characterStates)
+    this.ctrl = { id, angle: 0, up: false, down: false, left: false, right: false, fire: false, weapon: 1 }
     this.init()
   }
 
@@ -22,82 +34,68 @@ export class Shooter {
     const container = this.container
     scene.getMainContainer().addChild(container)
 
-    const char = new AnimatedSprite(characterStates)
+    const char = this.char
 
     container.addChild(char.sprite)
-    scene.setImagePosition(container, this.x, this.y, 1, 1)
+    scene.setImagePosition(container, this.attrs.x / 100, this.attrs.y / 100, 1, 1)
 
     char.sprite.anchor.set(0.5, 0.5)
-    char.sprite.angle = -30
-    // char.animationSpeed = 0.1
     char.play()
 
-    // mouse move
-    // const pixeSize = scene.options.pixelSize
-    engine.on('mousemove', (ex: number, ey: number, px: number, py: number, cx: number, cy: number) => {
-      // const x1 = this.x * pixeSize
-      // const y1 = this.y * pixeSize
-      const [x1, y1] = scene.getCanvasXY(this.x, this.y)
-      const angle = Math.atan2(cy - y1, cx - x1) - Math.PI / 2
-      char.sprite.rotation = angle
-      // console.log('angle', x1, y1, cx, cy, angle)
-    })
-
-    // key pressed
-    document.addEventListener('keydown', (e) => {
-      this.keysPressed[e.key] = true
-      // if (e.key === 'f') {
-      //   char.switch('hit_knife')
-      // }
-      if (e.key === '1') {
-        this.weapon = 'knife'
-      } else if (e.key === '2') {
-        this.weapon = 'gun'
-      } else if (e.key === '3') {
-        this.weapon = 'riffle'
-      } else if (e.key === '4') {
-        this.weapon = 'bat'
-      }
-    })
-    document.addEventListener('keyup', (e) => {
-      this.keysPressed[e.key] = false
-    })
-
-    engine.addTick(() => {
-      let moving = false
-      if (this.keysPressed['a']) {
-        this.x -= this.speed
-        moving = true
-      }
-      if (this.keysPressed['w']) {
-        this.y -= this.speed
-        moving = true
-      }
-      if (this.keysPressed['s']) {
-        this.y += this.speed
-        moving = true
-      }
-      if (this.keysPressed['d']) {
-        this.x += this.speed
-        moving = true
-      }
-
-      let hitting = this.keysPressed['f']
-      if (hitting) {
-        char.switchOnce(`man-hit-${this.weapon}`, 0.04)
-      } else if (moving) {
-        char.switch(`man-walk-${this.weapon}`)
-      } else {
-        char.switch(`man-idle-${this.weapon}`)
-      }
-
-      if (moving) this.updatePos()
-
-    })
+    engine.addTick(() => this.updateByCtrl())
   }
 
-  updatePos() {
+  setAngle(targetX: number, targetY: number) {
     const scene = this.map.scene
-    scene.setImagePosition(this.container, this.x, this.y)
+    const [x1, y1] = scene.getCanvasXY(this.attrs.x / 100, this.attrs.y / 100)
+    const angle = Math.atan2(targetY - y1, targetX - x1) + 1.5 * Math.PI
+    this.ctrl.angle = Math.round(angle * 100)
+    this.char.sprite.rotation = angle
+    // console.log('angle', angle)
+  }
+
+  private updateByCtrl() {
+    let moving = false
+    if (this.ctrl.left) {
+      this.attrs.x -= this.speed
+      moving = true
+    }
+    if (this.ctrl.up) {
+      this.attrs.y -= this.speed
+      moving = true
+    }
+    if (this.ctrl.down) {
+      this.attrs.y += this.speed
+      moving = true
+    }
+    if (this.ctrl.right) {
+      this.attrs.x += this.speed
+      moving = true
+    }
+
+    // if (moving) {
+      this.updatePos()
+    // }
+
+    if (this.ctrl.fire) {
+      this.char.switchOnce(`man-hit-${weapons[this.ctrl.weapon]}`, 0.04)
+    } else if (moving) {
+      this.char.switch(`man-walk-${weapons[this.ctrl.weapon]}`)
+    } else {
+      this.char.switch(`man-idle-${weapons[this.ctrl.weapon]}`)
+    }
+
+    // rotate
+    this.char.sprite.rotation = this.ctrl.angle / 100
+  }
+
+  private updatePos() {
+    if (this.lastX === this.attrs.x && this.lastY === this.attrs.y) return
+    this.lastX = this.attrs.x
+    this.lastY = this.attrs.y
+    const scene = this.map.scene
+
+    console.log('updatePos', this.attrs.x, this.attrs.y)
+    scene.setImagePosition(this.container, this.attrs.x / 100, this.attrs.y / 100)
   }
 }

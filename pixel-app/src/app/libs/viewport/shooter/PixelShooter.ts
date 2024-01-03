@@ -1,173 +1,23 @@
-import { AnimatedSprite, Assets, AssetsManifest, Container, Sprite, Spritesheet, Texture } from 'pixi.js'
+import { AnimatedSprite, Assets, Container } from 'pixi.js'
+
+import { CharacterAttrs, CharacterControl, ShootingGameStateUpdates, ctrlEqual, defaultCharacterAttrs } from 'adventure_engine/dist/shooting'
 
 import { PixelMap } from '../PixelMap'
 import { Shooter } from './Shooter'
 import { manifest } from './constants'
 
-// Manifest Example
-// const manifest: AssetsManifest = {
-//   bundles: [
-//     {
-//       name: 'man-idle-knife',
-//       assets: [
-//         {
-//           alias: 'man_idle_knife_0',
-//           src: '/shooter/Idle_knife/Idle_knife_000.png',
-//         },
-//         {
-//           alias: 'man_idle_knife_1',
-//           src: '/shooter/Idle_knife/Idle_knife_001.png',
-//         },
-//         {
-//           alias: 'man_idle_knife_2',
-//           src: '/shooter/Idle_knife/Idle_knife_002.png',
-//         },
-//         {
-//           alias: 'man_idle_knife_3',
-//           src: '/shooter/Idle_knife/Idle_knife_003.png',
-//         },
-//         {
-//           alias: 'man_idle_knife_4',
-//           src: '/shooter/Idle_knife/Idle_knife_004.png',
-//         },
-//         {
-//           alias: 'man_idle_knife_5',
-//           src: '/shooter/Idle_knife/Idle_knife_005.png',
-//         },
-//         {
-//           alias: 'man_idle_knife_6',
-//           src: '/shooter/Idle_knife/Idle_knife_006.png',
-//         },
-//         {
-//           alias: 'man_idle_knife_7',
-//           src: '/shooter/Idle_knife/Idle_knife_007.png',
-//         },
-//       ]
-//     },
-//     {
-//       name: 'man-walk-knife',
-//       assets: [
-//         {
-//           alias: 'man_walk_knife_0',
-//           src: '/shooter/Walk_knife/Walk_knife_000.png',
-//         },
-//         {
-//           alias: 'man_walk_knife_1',
-//           src: '/shooter/Walk_knife/Walk_knife_001.png',
-//         },
-//         {
-//           alias: 'man_walk_knife_2',
-//           src: '/shooter/Walk_knife/Walk_knife_002.png',
-//         },
-//         {
-//           alias: 'man_walk_knife_3',
-//           src: '/shooter/Walk_knife/Walk_knife_003.png',
-//         },
-//         {
-//           alias: 'man_walk_knife_4',
-//           src: '/shooter/Walk_knife/Walk_knife_004.png',
-//         },
-//         {
-//           alias: 'man_walk_knife_5',
-//           src: '/shooter/Walk_knife/Walk_knife_005.png',
-//         },
-//       ],
-//     },
-//     {
-//       name: 'man-hit-knife',
-//       assets: [
-//         {
-//           alias: 'man_hit_knife_0',
-//           src: '/shooter/Knife/Knife_000.png'
-//         },
-//         {
-//           alias: 'man_hit_knife_1',
-//           src: '/shooter/Knife/Knife_001.png'
-//         },
-//         {
-//           alias: 'man_hit_knife_2',
-//           src: '/shooter/Knife/Knife_002.png'
-//         },
-//         {
-//           alias: 'man_hit_knife_3',
-//           src: '/shooter/Knife/Knife_003.png'
-//         },
-//         {
-//           alias: 'man_hit_knife_4',
-//           src: '/shooter/Knife/Knife_004.png'
-//         },
-//         {
-//           alias: 'man_hit_knife_5',
-//           src: '/shooter/Knife/Knife_005.png'
-//         },
-//         {
-//           alias: 'man_hit_knife_6',
-//           src: '/shooter/Knife/Knife_006.png'
-//         },
-//         {
-//           alias: 'man_hit_knife_7',
-//           src: '/shooter/Knife/Knife_007.png'
-//         },
-//       ]
-//     }
-//   ]
-// }
-
-// const manifest: AssetsManifest = {
-//   bundles: [
-//     {
-//       name: 'man-idle-knife',
-//       assets: {
-//         'man_idle_knife_0': '/shooter/Idle_knife/Idle_knife_000.png',
-//         'man_idle_knife_1': '/shooter/Idle_knife/Idle_knife_001.png',
-//         'man_idle_knife_2': '/shooter/Idle_knife/Idle_knife_002.png',
-//         'man_idle_knife_3': '/shooter/Idle_knife/Idle_knife_003.png',
-//         'man_idle_knife_4': '/shooter/Idle_knife/Idle_knife_004.png',
-//         'man_idle_knife_5': '/shooter/Idle_knife/Idle_knife_005.png',
-//         'man_idle_knife_6': '/shooter/Idle_knife/Idle_knife_006.png',
-//         'man_idle_knife_7': '/shooter/Idle_knife/Idle_knife_007.png',
-//       }
-//     },
-//     {
-//       name: 'man-walk-knife',
-//       assets: {
-//         'man_walk_knife_0': '/shooter/Walk_knife/Walk_knife_000.png',
-//         'man_walk_knife_1': '/shooter/Walk_knife/Walk_knife_001.png',
-//         'man_walk_knife_2': '/shooter/Walk_knife/Walk_knife_002.png',
-//         'man_walk_knife_3': '/shooter/Walk_knife/Walk_knife_003.png',
-//         'man_walk_knife_4': '/shooter/Walk_knife/Walk_knife_004.png',
-//         'man_walk_knife_5': '/shooter/Walk_knife/Walk_knife_005.png',
-//       }
-//     },
-//     {
-//       name: 'man-hit-knife',
-//       assets: {
-//         'man_hit_knife_0': '/shooter/Knife/Knife_000.png',
-//         'man_hit_knife_1': '/shooter/Knife/Knife_001.png',
-//         'man_hit_knife_2': '/shooter/Knife/Knife_002.png',
-//         'man_hit_knife_3': '/shooter/Knife/Knife_003.png',
-//         'man_hit_knife_4': '/shooter/Knife/Knife_004.png',
-//         'man_hit_knife_5': '/shooter/Knife/Knife_005.png',
-//         'man_hit_knife_6': '/shooter/Knife/Knife_006.png',
-//         'man_hit_knife_7': '/shooter/Knife/Knife_007.png',
-//       }
-//     },
-//     {
-//       name: 'sample',
-//       assets: {
-
-//       }
-//     }
-//   ]
-// }
-
 export class PixelShooter {
+
+  idCharacterMap: {[id: number]: Shooter} = {}
+  selectingShooterId = 1
+
+  private lastCtrl: CharacterControl | undefined
+
   constructor(public map: PixelMap) {
     map.engine.alwaysRender = true
-    this.load()
   }
 
-  private async load() {
+  async load() {
     Assets.init({ manifest })
     await Assets.loadBundle('man-idle-knife')
     await Assets.loadBundle('man-walk-knife')
@@ -182,52 +32,159 @@ export class PixelShooter {
     await Assets.loadBundle('man-walk-bat')
     await Assets.loadBundle('man-hit-bat')
 
+    console.log('Done loading')
+
     // await Assets.load<Spritesheet>('/sho*}{_oter/Walk_knife/walk_knife.json')
 
-    // this.addChar()
-    new Shooter(this.map, 50, 50)
+    // mouse move
+    this.map.engine.on('mousemove', (ex: number, ey: number, px: number, py: number, cx: number, cy: number) => {
+      const shooter = this.idCharacterMap[this.selectingShooterId]
+      if (shooter) {
+        shooter.setAngle(cx, cy)
+      }
+    })
+
+    this.map.engine.on('dropman', (px: number, py: number) => {
+      // mockdata
+      // this.addShooter(1, {hp: 100, angle: 0, weapon: 1, x: px * 100, y: py * 100})
+      // request onMatch new shooter
+      this.requestAddShooter(px * 100, py * 100)
+    })
+
+    // key pressed
+    document.addEventListener('keydown', (e) => {
+      const shooter = this.idCharacterMap[this.selectingShooterId]
+      if (e.key === '1') {  // knife
+        shooter.ctrl.weapon = 1
+      } else if (e.key === '2') { // gun
+        shooter.ctrl.weapon = 2
+      } else if (e.key === '3') { // riffle
+        shooter.ctrl.weapon = 3
+      } else if (e.key === '4') { // bat
+        shooter.ctrl.weapon = 4
+      }
+
+      if (e.key === 'a') {
+        shooter.ctrl.left = true
+      } else if (e.key === 'd') {
+        shooter.ctrl.right = true
+      } else if (e.key === 'w') {
+        shooter.ctrl.up = true
+      } else if (e.key === 's') {
+        shooter.ctrl.down = true
+      }
+
+      if (e.key === 'f') {
+        shooter.ctrl.fire = true
+      }
+      
+      console.log('keydown', e.key)
+    })
+    document.addEventListener('keyup', (e) => {
+      const shooter = this.idCharacterMap[this.selectingShooterId]
+      if (e.key === 'a') {
+        shooter.ctrl.left = false
+      } else if (e.key === 'd') {
+        shooter.ctrl.right = false
+      } else if (e.key === 'w') {
+        shooter.ctrl.up = false
+      } else if (e.key === 's') {
+        shooter.ctrl.down = false
+      }
+
+      if (e.key === 'f') {
+        shooter.ctrl.fire = false
+      }
+
+      console.log('keyup', e.key)
+    })
+
+    // request ctrl periodically
+    let tickCount = 0
+    this.map.engine.addTick(() => {
+      const shooter = this.idCharacterMap[this.selectingShooterId]
+      if (tickCount === 0 && shooter) {
+        if (!this.lastCtrl || !ctrlEqual(shooter.ctrl, this.lastCtrl)) {
+          this.lastCtrl = Object.assign({}, shooter.ctrl)
+          this.requestCtrl(shooter.ctrl)
+        }
+      }
+      tickCount = (tickCount + 1) % 15
+    })
   }
 
-  addChar() {
-    const engine = this.map.engine
-    const scene = this.map.scene
-    const container = new Container()
-    scene.getMainContainer().addChild(container)
-
-    // const char = new Sprite(Texture.from('Walk_knife_000.png'))
-    // container.addChild(char)
-    // scene.setImagePosition(container, 50, 50, 2, 2)
-
-
-    // let count = 0
-    // const tick = () => {
-    //   // char.texture = Texture.from(`man_walk_knife_${count}`)
-    //   char.texture = Texture.from(`Walk_knife_00${count}.png`)
-    //   count = (count + 1) % 6
-    // }
-
-    // let tickCount = 0
-    // engine.addTick(() => {
-    //   if (tickCount === 0) {
-    //     tick()
-    //   }
-    //   tickCount = (tickCount + 1) % 10
-    // })
-
-    // const animations = Assets.cache.get('/shooter/Walk_knife/walk_knife.json').data.animations
-    // console.log('animations', animations)
-    const char = AnimatedSprite.fromFrames([
-      'man_walk_knife_0',
-      'man_walk_knife_1',
-      'man_walk_knife_2',
-      'man_walk_knife_3',
-      'man_walk_knife_4',
-      'man_walk_knife_5',
-    ])
-    container.addChild(char)
-    scene.setImagePosition(container, 50, 50, 2, 2)
-
-    char.animationSpeed = 1/8
-    char.play()
+  addShooter(id: number, attrs?: CharacterAttrs) {
+    if (!this.idCharacterMap[id]) {
+      this.idCharacterMap[id] = new Shooter(this.map, id, {...defaultCharacterAttrs, ...attrs})
+    }
   }
+
+  updateCtrls(ctrls: CharacterControl[]) {
+    for (let ctrl of ctrls) {
+      const char = this.idCharacterMap[ctrl.id]
+      if (char) {
+        char.ctrl = ctrl
+      }
+    }
+  }
+
+  updateMatch(attrsArr: CharacterAttrs[]) {
+    // const { updateIds, updates, fireIds } = matchUpdates
+    for (const attrs of attrsArr) {
+      const id = attrs.id
+      if (id >= 0 && attrs) {
+        this.addShooter(id, attrs)
+
+        const shooter = this.idCharacterMap[id]
+        // update current attrs
+        shooter.attrs = attrs
+      }
+    }
+  }
+
+  requestCtrl(ctrl: CharacterControl) {}
+  requestAddShooter(x: number, y: number) {}
+
+  // addChar() {
+  //   const engine = this.map.engine
+  //   const scene = this.map.scene
+  //   const container = new Container()
+  //   scene.getMainContainer().addChild(container)
+
+  //   // const char = new Sprite(Texture.from('Walk_knife_000.png'))
+  //   // container.addChild(char)
+  //   // scene.setImagePosition(container, 50, 50, 2, 2)
+
+
+  //   // let count = 0
+  //   // const tick = () => {
+  //   //   // char.texture = Texture.from(`man_walk_knife_${count}`)
+  //   //   char.texture = Texture.from(`Walk_knife_00${count}.png`)
+  //   //   count = (count + 1) % 6
+  //   // }
+
+  //   // let tickCount = 0
+  //   // engine.addTick(() => {
+  //   //   if (tickCount === 0) {
+  //   //     tick()
+  //   //   }
+  //   //   tickCount = (tickCount + 1) % 10
+  //   // })
+
+  //   // const animations = Assets.cache.get('/shooter/Walk_knife/walk_knife.json').data.animations
+  //   // console.log('animations', animations)
+  //   const char = AnimatedSprite.fromFrames([
+  //     'man_walk_knife_0',
+  //     'man_walk_knife_1',
+  //     'man_walk_knife_2',
+  //     'man_walk_knife_3',
+  //     'man_walk_knife_4',
+  //     'man_walk_knife_5',
+  //   ])
+  //   container.addChild(char)
+  //   scene.setImagePosition(container, 50, 50, 2, 2)
+
+  //   char.animationSpeed = 1/8
+  //   char.play()
+  // }
 }

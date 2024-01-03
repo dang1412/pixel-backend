@@ -282,6 +282,7 @@ export class EngineViewport {
     }
 
     requestAnimationFrame(() => this.runUpdate())
+    // setTimeout(() => this.runUpdate(), 40)
   }
 
   private setupMouseEvents() {
@@ -390,14 +391,16 @@ export class EngineViewport {
       const [x, y] = getXY(e)
       const [px, py] = scene.getViewportCoord(x, y)
 
-      // type 'beast', 'item' or 'building'
       const type = e.dataTransfer?.getData('type')
-      const id = e.dataTransfer?.getData('id')
       if (type === 'beast' || type === 'item' || type === 'building') {
+        // type 'beast', 'item' or 'building'
+        const id = e.dataTransfer?.getData('id')
         console.log(`drop ${type}`, id, px, py)
         if (id) {
           this.emit(`drop${type}`, Number(id), px, py)
         }
+      } else {
+        this.emit(`drop${type}`, px, py)
       }
     })
 

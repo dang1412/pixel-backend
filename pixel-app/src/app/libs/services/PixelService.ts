@@ -18,6 +18,7 @@ import { ApiPixel, ApiPixelImage, IIPFSService } from './types'
 import { AccountState, appGlobal } from '../states'
 import { LotteryService } from './LotteryService'
 import { AdventureService } from './AdventureService'
+import { ShooterService } from './ShooterService'
 
 const wsProvider = new WsProvider(WS_ENDPOINT)
 
@@ -46,6 +47,7 @@ export class PixelService {
 
   lotteryService: LotteryService
   adventureService: AdventureService
+  shooterService: ShooterService
 
   constructor(public api: ApiPromise, public ipfs: IIPFSService) {
     this.contract = new ContractPromise(
@@ -56,6 +58,7 @@ export class PixelService {
 
     this.lotteryService = new LotteryService(api)
     this.adventureService = new AdventureService(api)
+    this.shooterService = new ShooterService()
   }
 
   async uploadImageWithUrl(url: string): Promise<string> {
