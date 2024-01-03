@@ -1,4 +1,4 @@
 export * from './encodeFuncs'
-export * from './proceedControls'
+export * from './proceedGamePlay'
 export * from './types'
 export * from './fbs'

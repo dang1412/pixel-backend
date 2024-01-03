@@ -20,7 +20,7 @@ export function encodeShootingGameUpdates(stateUpdates: ShootingGameStateUpdates
   // updateAttrs
   PixelShooterUpdatesFbs.startUpdatesVector(builder, updates.length)
   for (const attrs of updates) {
-    CharacterAttrsFbs.createCharacterAttrsFbs(builder, attrs.hp, attrs.angle, attrs.weapon, attrs.x, attrs.y)
+    CharacterAttrsFbs.createCharacterAttrsFbs(builder, attrs.hp, 0, 1, attrs.x, attrs.y)
   }
   const updatesFbs = builder.endVector()
 
@@ -54,9 +54,10 @@ export function decodeShootingGameUpdates(data: Uint8Array): ShootingGameStateUp
   for (let i = len - 1; i >= 0; i--) {
     const obj = pixelShooterUpdatesFbs.updates(i)
     updates.push({
+      id: 0,
       hp: obj.hp(),
-      angle: obj.angle(),
-      weapon: obj.weapon(),
+      // angle: obj.angle(),
+      // weapon: obj.weapon(),
       x: obj.x(),
       y: obj.y()
     })

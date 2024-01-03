@@ -21,29 +21,29 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
 
 function proceedControl(state: ShootingGameState, ctrl: CharacterControl, updateIdSet: Set<number>, fireIdSet: Set<number>, deadIdSet: Set<number>) {
   const id = ctrl.id
-  const attrs = state.characterAttrsMap[id] || { hp: 100, angle: -90, weapon: 1, x: 50, y: 50 }
-  state.characterAttrsMap[id] = attrs
+  const attrs = state.characterAttrsMap[id] || { hp: 100, angle: -90, weapon: 1, x: 5000, y: 5000 }
+  // state.characterAttrsMap[id] = attrs
 
   // move
-  if (ctrl.l) {
+  if (ctrl.left) {
     attrs.x -= characterSpeed
   }
-  if (ctrl.u) {
+  if (ctrl.up) {
     attrs.y -= characterSpeed
   }
-  if (ctrl.d) {
+  if (ctrl.down) {
     attrs.y += characterSpeed
   }
-  if (ctrl.r) {
+  if (ctrl.right) {
     attrs.x += characterSpeed
   }
 
   // weapon
-  attrs.weapon = ctrl.w
+  // attrs.weapon = ctrl.weapon
   // angle
-  attrs.angle = ctrl.a
+  // attrs.angle = ctrl.angle
 
-  if (ctrl.f) {
+  if (ctrl.fire) {
     // TODO fire
     // check if alive
     // check if too close to last fire
