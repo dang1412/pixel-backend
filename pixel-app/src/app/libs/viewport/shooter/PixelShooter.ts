@@ -51,7 +51,7 @@ export class PixelShooter {
     await Assets.loadBundle('man-walk-bat')
     await Assets.loadBundle('man-hit-bat')
 
-    Assets.add({alias: 'shooter_select', src: '/shooter/circle.png'})
+    Assets.add({alias: 'shooter_select', src: '/pixel_shooter/circle.png'})
     await Assets.load('shooter_select')
 
     console.log('Done loading')

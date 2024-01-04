@@ -56,7 +56,7 @@ export class ShooterService {
 
   leaveMatch() {
     if (this.socket && this.matchId) {
-      this.socket?.leaveMatch(this.matchId)
+      this.socket.leaveMatch(this.matchId)
     }
   }
 

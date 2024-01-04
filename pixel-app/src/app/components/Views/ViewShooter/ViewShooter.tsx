@@ -48,7 +48,7 @@ export const ViewShooter: React.FC<Props> = (props) => {
         getDisplayFloat={getFloatDialog}
         allowToggleMode={false}
       />
-      <img className='inline-block' id={`man-shooter`} src='/shooter/man_icon_no_bg.png' onDragStart={(e) => dragMan(e)} width="100" height="100" />
+      <img className='inline-block' id={`man-shooter`} src='/pixel_shooter/man_icon_no_bg.png' onDragStart={(e) => dragMan(e)} width="100" height="100" />
     </>
   )
 }
