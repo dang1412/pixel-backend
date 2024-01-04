@@ -1,5 +1,5 @@
 import { pixelShooterMatchHandlers } from './PixelShooter'
-// import { matchInit, matchJoin, matchJoinAttempt, matchLeave, matchLoop, matchSignal, matchTerminate } from './match_handler'
+import { pixelAdventureMatchHandlers } from './match_handler'
 
 function InitModule(
     ctx: nkruntime.Context,
@@ -10,16 +10,8 @@ function InitModule(
     logger.info('Hello World!')
 
     // adventure match
-    // initializer.registerMatch('adventure_match', {
-    //     matchInit,
-    //     matchJoinAttempt,
-    //     matchJoin,
-    //     matchLeave,
-    //     matchLoop,
-    //     matchSignal,
-    //     matchTerminate
-    // })
-    // nk.matchCreate('adventure_match')
+    initializer.registerMatch('adventure_match', pixelAdventureMatchHandlers)
+    nk.matchCreate('adventure_match')
 
     // pixel shooter match
     initializer.registerMatch('pixel_shooter_match', pixelShooterMatchHandlers)
