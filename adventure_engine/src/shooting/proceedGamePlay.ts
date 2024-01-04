@@ -1,11 +1,12 @@
 import { encodeAttrsArray } from './encodeFuncs'
-import { CharacterControl, ShootingGameState, defaultCharacterAttrs, defaultCharacterControl } from './types'
+import { CharacterAttrs, CharacterControl, ShootingGameState, defaultCharacterAttrs, defaultCharacterControl } from './types'
 
-const characterSpeed = 6
+const characterSpeed = 80
 
 export function ctrlEqual(c1: CharacterControl, c2: CharacterControl): boolean {
   if (!c1 || !c2) return false
-  return c1.angle === c2.angle
+  return 1
+    // && c1.angle === c2.angle
     && c1.down === c2.down
     && c1.fire === c2.fire
     && c1.id === c2.id
@@ -30,28 +31,39 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
   return Object.values(idCtrlMap)
 }
 
-export function proceedGameLoop(state: ShootingGameState) {
-  for (const id of Object.keys(state.characterAttrsMap)) {
-    proceedGameLoopCharId(state, Number(id))
+export function proceedGameLoop(state: ShootingGameState): number[] {
+  const ids: number[] = []
+  for (const key of Object.keys(state.characterAttrsMap)) {
+    const id = Number(key)
+    const moved = proceedGameLoopCharId(state, id)
+    if (moved) ids.push(id)
   }
+
+  return ids
 }
 
-function proceedGameLoopCharId(state: ShootingGameState, id: number) {
+function proceedGameLoopCharId(state: ShootingGameState, id: number): boolean {
   const attrs = state.characterAttrsMap[id]
   const ctrl = state.characterCtrlMap[id]
+
   if (attrs && ctrl) {
+    let moved = false
     // move
     if (ctrl.left) {
       attrs.x -= characterSpeed
+      moved = true
     }
     if (ctrl.up) {
       attrs.y -= characterSpeed
+      moved = true
     }
     if (ctrl.down) {
       attrs.y += characterSpeed
+      moved = true
     }
     if (ctrl.right) {
       attrs.x += characterSpeed
+      moved = true
     }
 
     // weapon
@@ -65,20 +77,33 @@ function proceedGameLoopCharId(state: ShootingGameState, id: number) {
       // check if too close to last fire
       // fire
     }
+
+    return moved
   }
+
+  return false
 }
 
-export function addShooter(state: ShootingGameState, x: number, y: number) {
+export function addShooter(state: ShootingGameState, x: number, y: number): CharacterAttrs {
   let id = 1
   while (state.characterAttrsMap[id]) id++
 
-  state.characterAttrsMap[id] = { id, hp: 100, x, y }
+  const attrs: CharacterAttrs = { id, hp: 100, x, y }
+  state.characterAttrsMap[id] = attrs
   state.characterCtrlMap[id] = Object.assign({}, defaultCharacterControl, { id })
+
+  return attrs
 }
 
-export function encodeAllShooters(state: ShootingGameState): ArrayBuffer {
-  const attrsArr = Object.values(state.characterAttrsMap)
+export function encodeAllShooters(state: ShootingGameState, ids?: number[]): ArrayBuffer {
+  const attrsArr = ids ? getAttrsArr(state, ids) : Object.values(state.characterAttrsMap)
   const data = encodeAttrsArray(attrsArr)
 
   return data
+}
+
+function getAttrsArr(state: ShootingGameState, ids: number[]): CharacterAttrs[] {
+  const attrsArr = ids.map(id => state.characterAttrsMap[id])
+
+  return attrsArr
 }
