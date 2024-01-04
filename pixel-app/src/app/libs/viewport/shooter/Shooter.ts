@@ -1,6 +1,5 @@
 import { Container, Sprite, Texture } from 'pixi.js'
 
-import { PixelMap } from '../PixelMap'
 import { AnimatedSprite } from './AnimatedSprite'
 import { characterStates } from './constants'
 import { CharacterAttrs, CharacterControl } from 'adventure_engine/dist/shooting'
@@ -20,8 +19,6 @@ export class Shooter {
 
   ctrl: CharacterControl
 
-  // private lastX = 0
-  // private lastY = 0
   private curX = 0
   private curY = 0
 
@@ -73,29 +70,24 @@ export class Shooter {
     const angle = Math.atan2(targetY - y1, targetX - x1) + 1.5 * Math.PI
     this.ctrl.angle = Math.round(angle * 100)
     this.char.sprite.rotation = angle
-    // console.log('angle', angle)
   }
 
   private updateByCtrl() {
-    let moving = false
-    if (this.ctrl.left) {
-      // this.attrs.x -= this.speed
-      moving = true
-    }
-    if (this.ctrl.up) {
-      // this.attrs.y -= this.speed
-      moving = true
-    }
-    if (this.ctrl.down) {
-      // this.attrs.y += this.speed
-      moving = true
-    }
-    if (this.ctrl.right) {
-      // this.attrs.x += this.speed
-      moving = true
-    }
-
-    // if (moving) {
+    let moving = this.ctrl.left || this.ctrl.right || this.ctrl.up || this.ctrl.down
+    // if (this.curX === this.attrs.x && this.curY === this.attrs.y) {
+    //   if (this.ctrl.left) {
+    //     this.attrs.x -= this.speed
+    //   }
+    //   if (this.ctrl.up) {
+    //     this.attrs.y -= this.speed
+    //   }
+    //   if (this.ctrl.down) {
+    //     this.attrs.y += this.speed
+    //   }
+    //   if (this.ctrl.right) {
+    //     this.attrs.x += this.speed
+    //   }
+    // } else {
       this.updatePos()
     // }
 
@@ -112,13 +104,6 @@ export class Shooter {
   }
 
   private updatePos() {
-    // if (this.lastX === this.attrs.x && this.lastY === this.attrs.y) return
-    // this.lastX = this.attrs.x
-    // this.lastY = this.attrs.y
-    // const scene = this.map.scene
-
-    // console.log('updatePos', this.attrs.x, this.attrs.y)
-    // scene.setImagePosition(this.container, this.attrs.x / 100, this.attrs.y / 100)
     if (this.curX === this.attrs.x && this.curY === this.attrs.y) return
 
     this.curX = moveVal(this.curX, this.attrs.x, this.speed)

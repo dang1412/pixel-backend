@@ -3,25 +3,20 @@ import { v4 as uuidv4 } from 'uuid'
 import { CharacterControl, ShootingGameStateUpdates, decodeShootingGameUpdates, encodeControls, decodeControls, encodeAttrsArray, CharacterAttrs, decodeAttrsArray, getOpcode } from 'adventure_engine/dist/shooting'
 
 export class ShooterService {
-  client: Client
+  
   session?: Session
-  socket?: Socket
   matchId?: string
+  socket: Socket
 
   handleMatchUpdates?: (attrsArr: CharacterAttrs[]) => void
   handleMatchUpdatedCtrls?: (updatedCtrls: CharacterControl[]) => void
 
-  constructor() {
-    this.client = new Client('defaultkey', '127.0.0.1', '7350', false)
-    this.socket = this.client.createSocket(false)
+  constructor(public client: Client, ssl: boolean) {
+    this.socket = client.createSocket(ssl)
     this.socket.onmatchdata = (state) => {
       const { op_code, data } = state
       const opcode = getOpcode(data.buffer)
       console.log('matchState', opcode, data, state)
-      // const updates = decodeShootingGameUpdates(data)
-      // if (this.handleMatchUpdates) {
-      //   this.handleMatchUpdates(updates)
-      // }
       if (opcode === 0) {
         const attrsArr = decodeAttrsArray(data.buffer)
         if (this.handleMatchUpdates) {

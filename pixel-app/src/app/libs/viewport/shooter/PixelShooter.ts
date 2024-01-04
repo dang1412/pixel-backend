@@ -129,7 +129,7 @@ export class PixelShooter {
           this.requestCtrl(shooter.ctrl)
         }
       }
-      tickCount = (tickCount + 1) % 2
+      tickCount = (tickCount + 1) % 5
     })
   }
 
@@ -155,7 +155,6 @@ export class PixelShooter {
   }
 
   updateMatch(attrsArr: CharacterAttrs[]) {
-    // const { updateIds, updates, fireIds } = matchUpdates
     for (const attrs of attrsArr) {
       const id = attrs.id
       if (id >= 0 && attrs) {
@@ -170,47 +169,4 @@ export class PixelShooter {
 
   requestCtrl(ctrl: CharacterControl) {}
   requestAddShooter(x: number, y: number) {}
-
-  // addChar() {
-  //   const engine = this.map.engine
-  //   const scene = this.map.scene
-  //   const container = new Container()
-  //   scene.getMainContainer().addChild(container)
-
-  //   // const char = new Sprite(Texture.from('Walk_knife_000.png'))
-  //   // container.addChild(char)
-  //   // scene.setImagePosition(container, 50, 50, 2, 2)
-
-
-  //   // let count = 0
-  //   // const tick = () => {
-  //   //   // char.texture = Texture.from(`man_walk_knife_${count}`)
-  //   //   char.texture = Texture.from(`Walk_knife_00${count}.png`)
-  //   //   count = (count + 1) % 6
-  //   // }
-
-  //   // let tickCount = 0
-  //   // engine.addTick(() => {
-  //   //   if (tickCount === 0) {
-  //   //     tick()
-  //   //   }
-  //   //   tickCount = (tickCount + 1) % 10
-  //   // })
-
-  //   // const animations = Assets.cache.get('/shooter/Walk_knife/walk_knife.json').data.animations
-  //   // console.log('animations', animations)
-  //   const char = AnimatedSprite.fromFrames([
-  //     'man_walk_knife_0',
-  //     'man_walk_knife_1',
-  //     'man_walk_knife_2',
-  //     'man_walk_knife_3',
-  //     'man_walk_knife_4',
-  //     'man_walk_knife_5',
-  //   ])
-  //   container.addChild(char)
-  //   scene.setImagePosition(container, 50, 50, 2, 2)
-
-  //   char.animationSpeed = 1/8
-  //   char.play()
-  // }
 }
