@@ -1,2 +1,3 @@
 export * from './getPixelIndex'
-export * from './getPixelIndexesFromArea'
+export * from './getPixelsFromArea'
+export * from './constants'

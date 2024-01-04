@@ -1,7 +1,7 @@
 import { Renderer, Sprite, Texture, BaseTexture, Container } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
 
-import { drawViewportGrid, getPixelIndex, getPixelIndexesFromArea, getPixelXYFromIndex, getViewportCoord } from './utils'
+import { drawViewportGrid, getCanvasXY, getPixelIndex, getPixelIndexesFromArea, getPixelXYFromIndex, getViewportCoord } from './utils'
 import { PixelArea } from './types'
 
 export interface SceneViewportOpts {
@@ -109,10 +109,11 @@ export class SceneContainer {
     const x = Math.min(px1, px2)
     const y = Math.min(py1, py2)
 
-  
-    this.selectArea({x, y, w: Math.abs(px2 - px1) + 1, h: Math.abs(py2 - py1) + 1})
+    const w = Math.abs(px2 - px1) + 1
+    const h = Math.abs(py2 - py1) + 1
+    this.selectArea({x, y, w, h})
 
-    return [px1, py1, px2, py2]
+    return [x, y, x + w - 1, y + h - 1]
   }
 
   selectArea(area: PixelArea) {
@@ -154,9 +155,16 @@ export class SceneContainer {
 
   getViewportCoord(x: number, y: number): [number, number] {
     const { pixelSize, worldWidthPixel, worldHeightPixel } = this.options
-    const [xc, yc] = getViewportCoord(this.viewport, pixelSize, worldWidthPixel, worldHeightPixel, x, y)
+    const [px, py] = getViewportCoord(this.viewport, pixelSize, worldWidthPixel, worldHeightPixel, x, y)
 
-    return [xc, yc]
+    return [px, py]
+  }
+
+  getCanvasXY(px: number, py: number): [number, number] {
+    const { pixelSize } = this.options
+    const [cx, cy] = getCanvasXY(this.viewport, pixelSize, px, py)
+
+    return [cx, cy]
   }
 
   getPixelIndex(x: number, y: number): number {

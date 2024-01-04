@@ -1,8 +1,8 @@
-import { Container, Graphics, RenderTexture, Renderer, Sprite } from 'pixi.js'
+import { Container, Renderer } from 'pixi.js'
 
 import { SceneContainer } from './SceneContainer'
 import { Viewport } from 'pixi-viewport'
-import { PixelArea, PixelPoint } from './types'
+import { PixelArea } from './types'
 import { Minimap } from './Minimap'
 
 export type OnMouseMoveFunc = (mx: number, my: number, px: number, py: number) => void
@@ -14,10 +14,6 @@ export interface GameEngineOpts {
   width: number
   height: number
   minPixelSize?: number
-  // onMouseMove?: OnMouseMoveFunc
-  // onClick?: OnClickFunc
-  // onSelect?: OnSelectFunc
-  // onControl?: OnControlFunc
 }
 
 export class EngineViewport {
@@ -50,7 +46,8 @@ export class EngineViewport {
   // event listeners
   private handlersMap: Map<string, Function[]> = new Map()
 
-  // Event Listeners
+  //
+  alwaysRender = false
 
   on(event: string, handler: Function) {
     const funcs = this.handlersMap.get(event) || []
@@ -154,22 +151,6 @@ export class EngineViewport {
     }
   }
 
-  // setOnMouseMove(onMouseMove: OnMouseMoveFunc) {
-  //   this.options.onMouseMove = onMouseMove
-  // }
-
-  // setOnSelect(onSelect: OnSelectFunc) {
-  //   this.options.onSelect = onSelect
-  // }
-
-  // setOnClick(onClick: OnClickFunc) {
-  //   this.options.onClick = onClick
-  // }
-
-  // setOnControl(onControl: OnControlFunc) {
-  //   this.options.onControl = onControl
-  // }
-
   setDragOrSelectMode(mode: 0 | 1 | 2) {
     this.dragOrSelectMode = mode
     this.updateViewportDragMode()
@@ -207,15 +188,6 @@ export class EngineViewport {
 
     return index
   }
-
-  // async addImageURL(area: PixelArea, imageURL: string, layer = 'image'): Promise<Sprite> {
-  //   const scene = this.getCurrentScene()
-  //   const sprite = await scene.addImageURL(area, imageURL, layer)
-
-  //   this.updateMinimap()
-
-  //   return sprite
-  // }
 
   switchScene(index: number) {
     if (index === this.activeSceneIndex) { return }
@@ -284,9 +256,6 @@ export class EngineViewport {
     if (!scene) { return }
 
     const { x, y, w, h } = area
-    // if (this.options.onSelect) {
-    //   this.options.onSelect(mx, my, x, y, x + w - 1, y + h - 1)
-    // }
     this.emit('select', mx, my, x, y, x + w - 1, y + h - 1)
   }
 
@@ -302,9 +271,9 @@ export class EngineViewport {
   }
 
   private runUpdate() {
-    if (this.viewport.dirty) {
+    if (this.alwaysRender || this.viewport.dirty) {
       // render wrapper includes minimap and viewport
-      console.log('render ticks length', this.ticks.length)
+      // console.log('render ticks length', this.ticks.length)
       this.renderer.render(this.wrapper)
       this.viewport.dirty = false
       for (const tick of this.ticks) {
@@ -313,6 +282,7 @@ export class EngineViewport {
     }
 
     requestAnimationFrame(() => this.runUpdate())
+    // setTimeout(() => this.runUpdate(), 40)
   }
 
   private setupMouseEvents() {
@@ -321,6 +291,7 @@ export class EngineViewport {
 
     let selecting = false
     let [startX, startY] = [0 ,0]
+    // let [startPx, startPy] = [0, 0]
 
     const getXY = (e: {x: number, y: number}) => {
       const x = e.x - canvas.offsetLeft
@@ -332,30 +303,14 @@ export class EngineViewport {
       const scene = this.getCurrentScene()
       if (!scene) { return }
 
-      const [x1, x2] = startX < endX ? [startX, endX] : [endX, startX]
-      const [y1, y2] = startY < endY ? [startY, endY] : [endY, startY]
-
       if (this.dragOrSelectMode === 1) {
         // select mode
-        const [px1, py1, px2, py2] = scene.select(x1, y1, x2, y2)
-
-        // if (this.options.onSelect) {
-        //  this.options.onSelect(ex, ey, px1, py1, px2, py2)
-        // }
+        const [px1, py1, px2, py2] = scene.select(startX, startY, endX, endY)
         this.emit('select', ex, ey, px1, py1, px2, py2)
       } else if (this.dragOrSelectMode === 2) {
         // control mode
-        // const [px1, py1] = scene.getViewportCoord(x1, y1)
-        // const [px2, py2] = scene.getViewportCoord(x2, y2)
-        // const [_, __, px, py] = scene.select(endX, endY, endX, endY)
-        // console.log('onControl', px, py)
         const [px, py] = scene.getViewportCoord(endX, endY)
-        this.emit('select', ex, ey, px, py, px, py)
-        // if (this.options.onSelect) {
-        //   this.options.onSelect(ex, ey, px, py, px, py)
-        //   // scene.selectArea({x: px1, y: py1, w: px2 - px1 + 1, h: py2 - py1 + 1})
-        //   // scene.select(x2, y2, x2, y2)
-        // }
+        this.emit('controlling', ex, ey, px, py)
       }
     }
 
@@ -363,22 +318,20 @@ export class EngineViewport {
       const scene = this.getCurrentScene()
       if (scene) {
         const [px, py] = scene.getViewportCoord(cx, cy)
-        this.emit('mousemove', ex, ey, px, py)
-        // if (this.options.onMouseMove) {
-        //   this.options.onMouseMove(ex, ey, px, py)
-        // }
+        this.emit('mousemove', ex, ey, px, py, cx, cy)
       }
     }
 
     // used to check in click event, mouse should not move too far to fire 'click'
     let downx: number, downy: number, upx: number, upy: number
     const start = (e: {x: number, y: number}) => {
+      const scene = this.getCurrentScene()
+      if (!scene) { return }
       downx = e.x
       downy = e.y
-      // no select in drag mode
-      if (this.dragOrSelectMode === 0) return
-      [startX, startY] = getXY(e)
-      onSelect(e.x, e.y, startX, startY, startX, startY)
+      ;[startX, startY] = getXY(e)
+      const [px, py] = scene.getViewportCoord(startX, startY)
+      this.emit('startselect', e.x, e.y, px, py)
       selecting = true
     }
 
@@ -392,21 +345,10 @@ export class EngineViewport {
       selecting = false
       
       if (this.dragOrSelectMode === 2) {
-        // end control mode, switch to drag mode
-        // this.setDragOrSelectMode(0)
-        // if (this.options.onControl) {
-          const [x, y] = getXY(e)
-          // const [px1, py1] = scene.getViewportCoord(startX, startY)
-          const [px, py] = scene.getViewportCoord(x, y)
-          // this.options.onControl(px1, py1, px2, py2)
-          this.emit('controlend', px, py)
-        // }
+        const [x, y] = getXY(e)
+        const [px, py] = scene.getViewportCoord(x, y)
+        this.emit('controlend', px, py)
       }
-
-      // const scene = this.getCurrentScene()
-      // if (scene) {
-      //   scene.onSelectEnd(e.x, e.y)
-      // }
     }
 
     const move = (e: { x: number, y: number }) => {
@@ -449,14 +391,16 @@ export class EngineViewport {
       const [x, y] = getXY(e)
       const [px, py] = scene.getViewportCoord(x, y)
 
-      // type 'beast', 'item' or 'building'
       const type = e.dataTransfer?.getData('type')
-      const id = e.dataTransfer?.getData('id')
       if (type === 'beast' || type === 'item' || type === 'building') {
+        // type 'beast', 'item' or 'building'
+        const id = e.dataTransfer?.getData('id')
         console.log(`drop ${type}`, id, px, py)
         if (id) {
           this.emit(`drop${type}`, Number(id), px, py)
         }
+      } else {
+        this.emit(`drop${type}`, px, py)
       }
     })
 

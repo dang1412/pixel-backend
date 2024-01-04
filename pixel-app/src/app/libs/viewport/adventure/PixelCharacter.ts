@@ -54,7 +54,6 @@ export class PixelCharacter {
     const scene = this.adv.map.scene
     scene.getMainContainer().addChild(this.container)
     scene.setSelectingAnchor(0.5, 0.5)
-    const pixelSize = scene.options.pixelSize
 
     // draw range
     let circle = this.rangeDraw
@@ -73,7 +72,6 @@ export class PixelCharacter {
     // draw HP
     let bar = this.hpDraw
     this.container.addChild(bar)
-    // this.updateHp(2)
 
     // container position
     scene.setImagePosition(this.container, this.x, this.y)
@@ -90,63 +88,63 @@ export class PixelCharacter {
       circle.visible = false
       scene.viewport.dirty = true
     })
+  }
 
+  startControl() {
     const engine = this.adv.map.engine
-    const controlstart = () => {
-      // set engine mode 2 (control mode)
-      engine.setDragOrSelectMode(2)
-      // inform this is last controlled beast
-      this.adv.setControlBeast(this)
-      this.selecting = true
-      circle.visible = true
+    const scene = this.adv.map.scene
+    const beast = this.characterDraw
+    const pixelSize = scene.options.pixelSize
 
-      // selecting on control mode, mark the current pixel only
-      let lastx = -1, lasty = -1
-      const select = async (ex: number, ey: number, px: number, py: number) => {
-        // console.log(lastx, lasty, px, py)
-        if (lastx === px && lasty === py) return
+    // set engine mode 2 (control mode)
+    engine.setDragOrSelectMode(2)
+    // inform this is last controlled beast
+    this.adv.setControlBeast(this)
+    this.selecting = true
+    this.rangeDraw.visible = true
 
-        lastx = px
-        lasty = py
-        if (this.isInRange(px, py)) {
-          const mode = this.controlMode
-          scene.setSelectingImageTexture(mode === 0 ? beast.texture : Texture.from('energy'), 0.4)
-          scene.selectArea({ x: px + 0.5, y: py + 0.5, w: mode === 0 ? beast.width / pixelSize : 1, h: mode === 0 ? beast.height / pixelSize : 1 })
-        } else {
-          scene.clearSelect()
-        }
+    // selecting on control mode, mark the current pixel only
+    let lastx = -1, lasty = -1
+    const controlling = async (ex: number, ey: number, px: number, py: number) => {
+      // console.log(lastx, lasty, px, py)
+      if (lastx === px && lasty === py) return
+
+      lastx = px
+      lasty = py
+      if (this.isInRange(px, py)) {
+        const mode = this.controlMode
+        scene.setSelectingImageTexture(mode === 0 ? beast.texture : Texture.from('energy'), 0.4)
+        scene.selectArea({ x: px + 0.5, y: py + 0.5, w: mode === 0 ? beast.width / pixelSize : 1, h: mode === 0 ? beast.height / pixelSize : 1 })
+      } else {
+        scene.clearSelect()
       }
-      engine.on('select', select)
-
-      engine.once('controlend', (px: number, py: number) => {
-        // back to drag mode
-        engine.setDragOrSelectMode(0)
-        this.selecting = false
-        circle.visible = false
-
-        engine.removeListener('select', select)
-
-        // check in range
-        if (this.isInRange(px, py)) {
-          // emit control
-          // engine.emit('control', this.x, this.y, px, py)
-          const pixel = this.adv.map.scene.getPixelIndex(px, py)
-          this.adv.outputCtrl(this.controlMode === 0 ? 0 : 1, this.id, pixel)
-        }
-      })
     }
+    engine.on('controlling', controlling)
 
-    this.container.on('mousedown', controlstart)
-    this.container.on('touchstart', controlstart)
+    engine.once('controlend', (px: number, py: number) => {
+      // back to drag mode
+      engine.setDragOrSelectMode(0)
+      this.selecting = false
+      this.rangeDraw.visible = false
+
+      engine.removeListener('controlling', controlling)
+
+      // check in range
+      if (this.isInRange(px, py)) {
+        // output control
+        const pixel = this.adv.map.scene.getPixelIndex(px, py)
+        this.adv.outputCtrl(this.controlMode === 0 ? 0 : 1, this.id, pixel)
+      }
+    })
   }
 
   async drawBeast(imageUrl: string) {
-    const texture = await Texture.fromURL(imageUrl)
+    const texture = Texture.from(imageUrl)
     const character = this.characterDraw
     character.texture = texture
 
     const pixelSize = this.adv.map.scene.options.pixelSize
-    const size = pixelSize * (this.type === 8 ? 3 : this.size)
+    const size = pixelSize * (this.type >= 8 ? 3 : this.size)
 
     // check if venom type 8
     // const ratio = this.type === 8 ? 6 : Math.min(character.width / pixelSize, character.height / pixelSize)
@@ -163,7 +161,6 @@ export class PixelCharacter {
     const bar = this.hpDraw
     bar.clear()
     bar.beginFill(this.hp === 3 ? 'green' : this.hp === 2 ? 'yellow' : 'red')
-    // const character = this.characterDraw
     bar.drawRect(0, 0- 5, this.adv.map.scene.options.pixelSize * this.hp / 3, 3)
     bar.endFill()
   }
@@ -198,7 +195,7 @@ export class PixelCharacter {
     const pixelSize = this.adv.map.scene.options.pixelSize
 
     const image = itemWearImages[id]
-    equipDraw.texture = image ? await Texture.fromURL(image) : Texture.EMPTY
+    equipDraw.texture = image ? Texture.from(image) : Texture.EMPTY
     equipDraw.width = pixelSize * 1.5
     equipDraw.height = pixelSize * 1.5
     equipDraw.x = equipDraw.y = pixelSize / 2
@@ -225,12 +222,6 @@ export class PixelCharacter {
 
     return Math.abs(x - this.x) <= this.range && Math.abs(y - this.y) <= this.range
   }
-
-  // select(selecting = true) {
-  //   this.selecting = selecting
-  //   this.rangeDraw.visible = selecting
-  //   this.adv.map.scene.viewport.dirty = true
-  // }
 
   async move(tx: number, ty: number, type = 0): Promise<void> {
     const engine = this.adv.map.engine

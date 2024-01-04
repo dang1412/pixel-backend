@@ -4,7 +4,7 @@ export interface PixelArea {
   x: number, y: number, w: number, h: number
 }
 
-export function getPixelIndexesFromArea(area: PixelArea, mapWidth: number): number[] {
+export function getPixelsFromArea(area: PixelArea, mapWidth: number): number[] {
   const indexes: number[] = []
 
   for (let j = 0; j < area.h; j++) {

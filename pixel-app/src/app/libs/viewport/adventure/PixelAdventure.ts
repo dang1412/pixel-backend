@@ -1,11 +1,11 @@
 import { sound } from '@pixi/sound'
+import { Assets, Spritesheet } from 'pixi.js'
 
 import { PixelMap } from '../PixelMap'
 import { CharacterOptions, PixelCharacter } from './PixelCharacter'
-import { AdventureUpdate, PixelArea, getPixelXYFromIndex } from 'adventure_engine'
+import { AdventureUpdate, getPixelXYFromIndex } from 'adventure_engine'
 import { WORLD_WIDTH } from '../constants'
-import { beastImageMap, buildingImages, itemImages } from './constants'
-import { Assets, Loader, Rectangle, Spritesheet, Texture } from 'pixi.js'
+import { ALL_IMAGES, beastImageMap, buildingImages, itemImages } from './constants'
 import { TextureAnimate } from './TextureAnimate'
 
 interface PixelAction {
@@ -20,33 +20,24 @@ export class PixelAdventure {
   idCharacterMap = new Map<number, PixelCharacter>()
   lastControlBeast: PixelCharacter | null = null
 
-  // // submap
-  // pixelToSubGameMap: Map<number, PixelGameMap> = new Map()
-  // mainMap: PixelMap
-
-  // parent
-  // parentGameMap: PixelGameMap | undefined
-  // private isInitialized = false
-
-  // shoot or move control mode
-  // controlMode = 0
-
+  // animate
   textureAnimate: TextureAnimate
 
   constructor(public map: PixelMap) {
-    // map.scene.addImageURL({x: 50, y: 43, w:1, h:1}, '/svgs/car.svg', 'items')
-    // map.scene.addImageURL({x: 43, y: 46, w:1, h:1}, '/svgs/power.svg', 'items')
     map.scene.addImageURL({x: 44, y: 50, w:1, h:1}, '/svgs/coins.svg', 'items')
-    // map.scene.addImageURL({x: 57, y: 54, w:1, h:1}, '/svgs/rocket.svg', 'items')
 
     const engine = map.engine
     this.textureAnimate = new TextureAnimate(engine)
 
+    engine.on('startselect', (x: number, y: number, px: number, py: number) => {
+      const beast = this.getCharacter(px, py)
+      if (beast) {
+        beast.startControl()
+      }
+    })
+
     engine.on('dropbeast', (id: number, px: number, py: number) => {
       // add beast to the map
-      // this.addCharacter(px, py, { id, name: `beast-${id}`, range: 4 }, '/images/axie.png')
-      // inform server
-      // engine.emit('control', px, py, px, py)
       const pixel = this.map.scene.getPixelIndex(px, py)
       this.outputCtrl(2, id, pixel)
     })
@@ -57,12 +48,8 @@ export class PixelAdventure {
     })
 
     engine.on('dropbuilding', (id: number, px: number, py: number) => {
-      // const pixel = this.map.scene.getPixelIndex(px, py)
-      // this.outputCtrl(99, id, pixel)
       if (this.map.parentMap) {
         // only drop building on submap
-        // const texture = Texture.from(`building-${id}`)
-        // this.map.scene.addLayerAreaTexture({x: px, y: py, w: 5, h: 5}, texture, 'building')
         this.map.addImage({
           area: {x: px, y: py, w: 5, h: 5},
           imageUrl: buildingImages[id],
@@ -93,29 +80,33 @@ export class PixelAdventure {
     sound.add('explode2', '/sounds/explosion4.mp3')
 
     // images
-    Assets.add('energy', '/images/energy2.png')
-    Assets.add('saitama-move', '/animations/saitama-move.png')
-    Assets.add('venom', '/animations/venom.png')
-    Assets.add('venom-fight', '/animations/venom-fight.png')
-    Assets.load('energy')
-    Assets.load('saitama-move')
-    Assets.load('venom')
-    Assets.load('venom-fight')
+    // Assets.add('energy', '/images/energy2.png')
+    // Assets.add('saitama-move', '/animations/saitama-move.png')
+    // Assets.add('venom', '/animations/venom.png')
+    // Assets.add('venom-fight', '/animations/venom-fight.png')
+    // Assets.add('auraflame', '/images/auraflame.png')
+    // Assets.load('energy')
+    // Assets.load('saitama-move')
+    // Assets.load('venom')
+    // Assets.load('venom-fight')
+    // Assets.load('auraflame')
     Assets.load<Spritesheet>('/animations/fire3-0.json')
     Assets.load<Spritesheet>('/animations/explosion1.json')
     Assets.load<Spritesheet>('/animations/strike-0.json')
     Assets.load<Spritesheet>('/animations/smash.json')
 
-    // building images
-    const ids = Object.keys(buildingImages)
-    for (const id of ids) {
-      const image = buildingImages[Number(id)]
-      if (id && image) {
-        const key = `building-${id}`
-        Assets.add(key, image)
-        Assets.load(key)
-        console.log('load', key, image)
+    // load all images
+    const keys = Object.keys(ALL_IMAGES)
+    for (const key of keys) {
+      const image = ALL_IMAGES[key]
+      if (key && image) {
+        Assets.add({alias: key, src: image})
       }
+    }
+
+    for (const key of keys) {
+      Assets.load(key)
+      console.log('load', key)
     }
 
     // Assets.add('strike', '/images/animations/strike.png')

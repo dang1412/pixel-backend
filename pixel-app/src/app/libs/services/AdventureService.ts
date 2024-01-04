@@ -1,25 +1,15 @@
 import { ApiPromise } from '@polkadot/api'
 import { ContractPromise } from '@polkadot/api-contract'
 import type { InjectedAccountWithMeta } from '@polkadot/extension-inject/types'
-// import { IEventLike } from '@polkadot/types/types/events'
-// import type { Bytes } from '@polkadot/types'
 
 import { Client, Match, Session, Socket } from '@heroiclabs/nakama-js'
 import { v4 as uuidv4 } from 'uuid'
+
 import { AdventureUpdate, decodeMatchUpdate } from 'adventure_engine'
-
-// import WebSocket from 'ws'
-
-
-// import { Builder, ByteBuffer } from 'flatbuffers'
 
 import metadata from './ink/pixel_adventure.json'
 import { CONTRACT_ADDRESS_ADVENTURE } from './ink'
 import { doMessage, doQuery } from './utils'
-
-// import { BeastAction } from './buffer/beast-action'
-// import { UpdateState } from './buffer/update-state'
-// import { decodeMatchUpdate } from './buffer/decodeMatchUpdate'
 
 const MATCH_NAME = 'PixelAdventure'
 
@@ -45,40 +35,18 @@ function decodeAction(data: Uint8Array): [number, number] {
   return [num1, num2]
 }
 
-// function encodeAction(id: number, target: number): Uint8Array {
-//   let builder = new Builder(1024)
-//   builder.startObject(1)
-//   BeastAction.createBeastAction(builder, id, target)
-//   const end = builder.endObject()
-//   builder.finish(end)
-
-//   return builder.asUint8Array()
-// }
-
-// function decodeBeastAction(data: Uint8Array): any {
-//   const buffer = new ByteBuffer(data)
-//   const beastAction = new BeastAction()
-//   beastAction.__init(0, buffer)
-
-//   return {
-//     id: beastAction.id(),
-//     target: beastAction.target()
-//   }
-// }
-
 export class AdventureService {
   private contract: ContractPromise
   private account?: InjectedAccountWithMeta
 
   // ws: WebSocket
-  client: Client
   session?: Session
-  socket?: Socket
   matchId?: string
+  socket: Socket
 
   handleMatchUpdates?: (updates: AdventureUpdate) => void
 
-  constructor(private api: ApiPromise) {
+  constructor(private api: ApiPromise, public client: Client, ssl: boolean) {
     let contract = this.contract = new ContractPromise(
       api,
       metadata,
@@ -142,10 +110,7 @@ export class AdventureService {
     //   console.log('onmessage', msg.data)
     // }
 
-    this.client = new Client('defaultkey', 'api.millionpixelland.com', '443', true)
-    this.socket = this.client.createSocket(true)
-    // this.client = new Client('defaultkey', '127.0.0.1', '7350', false)
-    // this.socket = this.client.createSocket(false)
+    this.socket = client.createSocket(ssl)
     this.socket.onmatchdata = (matchState) => {
       console.log('matchState', matchState.data)
       const updates = decodeMatchUpdate(matchState.data)
@@ -153,33 +118,10 @@ export class AdventureService {
         this.handleMatchUpdates(updates)
       }
     }
-    console.log('this.socket', this.socket)
   }
 
   async setAccount(account?: InjectedAccountWithMeta) {
     this.account = account
-    // this.joinMatch()
-
-    // if (account) {
-    //   this.session = await this.client.authenticateDevice(account.address, true)
-    //   console.log(this.session)
-      
-    //   if (this.socket) {
-    //     await this.socket.connect(this.session, true)
-    //     // const match = this.match = await this.socket.createMatch(MATCH_NAME)
-    //     // await this.socket.joinMatch(match.match_id)
-    //     // console.log('joined match', match)
-
-    //     const result = await this.client.listMatches(this.session)
-
-    //     if (result.matches) {
-    //       const match = result.matches[0]
-    //       console.log("%o: %o/10 players", match.match_id, match.size, match)
-    //       this.matchId = match.match_id
-    //       await this.socket.joinMatch(match.match_id)
-    //     }
-    //   }
-    // }
   }
 
   async joinMatch() {
@@ -193,7 +135,7 @@ export class AdventureService {
       // await this.socket.joinMatch(match.match_id)
       // console.log('joined match', match)
 
-      const result = await this.client.listMatches(this.session)
+      const result = await this.client.listMatches(this.session, undefined, undefined, 'PixelAdventure')
 
       if (result.matches) {
         const match = result.matches[0]
@@ -228,39 +170,6 @@ export class AdventureService {
 
     return 0
   }
-
-  // async move(beastId: number, pixelId: number): Promise<string> {
-  //   // this.ws.send(JSON.stringify({ type: 0, id: charId, pixel: pixelId }))
-  //   if (!this.socket || !this.matchId) return 'no socket'
-
-  //   console.log('Move sendMatchState', beastId, pixelId)
-  //   const data = encodeAction(beastId, pixelId)
-
-  //   await this.socket.sendMatchState(this.matchId, 0, data)
-
-  //   return ''
-  //   // return doMessage(this.api, this.contract, 'adventureTrait::actionMove', [charId, pixelId], this.account)
-  // }
-
-  // async shoot(beastId: number, pixelId: number): Promise<string> {
-  //   // this.ws.send(JSON.stringify({ type: 1, id: charId, pixel: pixelId }))
-  //   if (!this.socket || !this.matchId) return 'no socket'
-
-  //   const data = encodeAction(beastId, pixelId)
-  //   await this.socket.sendMatchState(this.matchId, 1, data)
-
-  //   return ''
-  //   // return doMessage(this.api, this.contract, 'adventureTrait::actionShoot', [charId, pixelId], this.account)
-  // }
-
-  // async onboard(beastId: number, pixelId: number): Promise<string> {
-  //   if (!this.socket || !this.matchId) return 'no socket'
-
-  //   const data = encodeAction(beastId, pixelId)
-  //   await this.socket.sendMatchState(this.matchId, 2, data)
-
-  //   return ''
-  // }
 
   async requestAction(opcode: number, beastId: number, pixelId: number, type?: number): Promise<string> {
     if (!this.socket || !this.matchId) return 'no socket'
