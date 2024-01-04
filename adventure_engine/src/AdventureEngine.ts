@@ -95,7 +95,8 @@ export class AdventureEngine {
 
   static onboardBeast(state: AdventureState, beastId: number, pixel: number, weapons: [number, number][], attrs?: BeastAttrs): boolean {
     const type = Math.floor(beastId / 1000000)
-    const beastAttrs = {...defaultBeastAttrs, ...state.beastTypeAttrsMap[type] || {}, ...attrs || {}}
+    // const beastAttrs = {...defaultBeastAttrs, ...state.beastTypeAttrsMap[type] || {}, ...attrs || {}}
+    const beastAttrs = Object.assign({}, defaultBeastAttrs, state.beastTypeAttrsMap[type] || {}, attrs || {})
     state.beastAttrsMap[beastId] = beastAttrs
 
     // const [x, y] = getPixelXYFromIndex(pixel, 100)
