@@ -21,7 +21,8 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
 
   for (const ctrl of ctrls) {
     const id = ctrl.id
-    if (!ctrlEqual(state.characterCtrlMap[id], ctrl)) {
+    // prioritize prev control if more than 1 control from same character
+    if (!idCtrlMap[id] && !ctrlEqual(state.characterCtrlMap[id], ctrl)) {
       // update ctrl
       state.characterCtrlMap[id] = ctrl
       idCtrlMap[id] = ctrl
