@@ -1,3 +1,17 @@
+function __spreadArray(to, from, pack) {
+  if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+    if (ar || !(i in from)) {
+      if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+      ar[i] = from[i];
+    }
+  }
+  return to.concat(ar || Array.prototype.slice.call(from));
+}
+typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
+  var e = new Error(message);
+  return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
+};
+
 function encodeControls(characterControls) {
   var buffer = new ArrayBuffer(3 * characterControls.length + 1);
   var view = new DataView(buffer);
@@ -89,10 +103,10 @@ var defaultCharacterControl = {
   id: 0
 };
 
-var characterSpeed = 6;
+var characterSpeed = 80;
 function ctrlEqual(c1, c2) {
   if (!c1 || !c2) return false;
-  return c1.angle === c2.angle && c1.down === c2.down && c1.fire === c2.fire && c1.id === c2.id && c1.left === c2.left && c1.right === c2.right && c1.up === c2.up && c1.weapon === c2.weapon;
+  return c1.down === c2.down && c1.fire === c2.fire && c1.id === c2.id && c1.left === c2.left && c1.right === c2.right && c1.up === c2.up && c1.weapon === c2.weapon;
 }
 function proceedControls(state, ctrls) {
   var idCtrlMap = {};
@@ -107,47 +121,66 @@ function proceedControls(state, ctrls) {
   return Object.values(idCtrlMap);
 }
 function proceedGameLoop(state) {
+  var ids = [];
   for (var _i = 0, _a = Object.keys(state.characterAttrsMap); _i < _a.length; _i++) {
-    var id = _a[_i];
-    proceedGameLoopCharId(state, Number(id));
+    var key = _a[_i];
+    var id = Number(key);
+    var moved = proceedGameLoopCharId(state, id);
+    if (moved) ids.push(id);
   }
+  return ids;
 }
 function proceedGameLoopCharId(state, id) {
   var attrs = state.characterAttrsMap[id];
   var ctrl = state.characterCtrlMap[id];
   if (attrs && ctrl) {
+    var moved = false;
     if (ctrl.left) {
       attrs.x -= characterSpeed;
+      moved = true;
     }
     if (ctrl.up) {
       attrs.y -= characterSpeed;
+      moved = true;
     }
     if (ctrl.down) {
       attrs.y += characterSpeed;
+      moved = true;
     }
     if (ctrl.right) {
       attrs.x += characterSpeed;
+      moved = true;
     }
     if (ctrl.fire) ;
+    return moved;
   }
+  return false;
 }
 function addShooter(state, x, y) {
   var id = 1;
   while (state.characterAttrsMap[id]) id++;
-  state.characterAttrsMap[id] = {
+  var attrs = {
     id: id,
     hp: 100,
     x: x,
     y: y
   };
+  state.characterAttrsMap[id] = attrs;
   state.characterCtrlMap[id] = Object.assign({}, defaultCharacterControl, {
     id: id
   });
+  return attrs;
 }
-function encodeAllShooters(state) {
-  var attrsArr = Object.values(state.characterAttrsMap);
+function encodeAllShooters(state, ids) {
+  var attrsArr = ids ? getAttrsArr(state, ids) : Object.values(state.characterAttrsMap);
   var data = encodeAttrsArray(attrsArr);
   return data;
+}
+function getAttrsArr(state, ids) {
+  var attrsArr = ids.map(function (id) {
+    return state.characterAttrsMap[id];
+  });
+  return attrsArr;
 }
 
 var int32 = new Int32Array(2);
@@ -161,35 +194,6 @@ var Encoding;
   Encoding[Encoding["UTF16_STRING"] = 2] = "UTF16_STRING";
 })(Encoding || (Encoding = {}));
 
-var TextEncoder = function () {
-  function TextEncoder() {}
-  TextEncoder.prototype.encode = function (input) {
-    var utf8 = unescape(encodeURIComponent(input));
-    var result = new Uint8Array(utf8.length);
-    for (var i = 0; i < utf8.length; i++) {
-      result[i] = utf8.charCodeAt(i);
-    }
-    return result;
-  };
-  return TextEncoder;
-}();
-var TextDecoder = function () {
-  function TextDecoder() {}
-  TextDecoder.prototype.decode = function (input) {
-    var bytes = new Uint8Array(input);
-    var result = '';
-    for (var i = 0; i < bytes.length; i++) {
-      result += String.fromCharCode(bytes[i]);
-    }
-    try {
-      return decodeURIComponent(escape(result));
-    } catch (e) {
-      throw new Error('The encoded data was not valid.');
-    }
-  };
-  return TextDecoder;
-}();
-
 function matchInit(ctx, logger, nk, params) {
   logger.debug('PixelShooter match created');
   var presences = {};
@@ -202,7 +206,7 @@ function matchInit(ctx, logger, nk, params) {
       presences: presences,
       game: game
     },
-    tickRate: 20,
+    tickRate: 5,
     label: 'PixelShooter'
   };
 }
@@ -235,11 +239,13 @@ function matchLeave(ctx, logger, nk, dispatcher, tick, state, presences) {
 }
 function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
   var ctrls = [];
+  var newIds = [];
   messages.forEach(function (m) {
     if (m.opCode === 0) {
-      var attrs = decodeAttrsArray(m.data)[0];
-      logger.info('Received new shooter %v', attrs);
-      addShooter(state.game, attrs.x, attrs.y);
+      var decoded = decodeAttrsArray(m.data)[0];
+      logger.info('Received new shooter %v', decoded);
+      var attrs = addShooter(state.game, decoded.x, decoded.y);
+      newIds.push(attrs.id);
     } else if (m.opCode === 1) {
       var ctrl = decodeControls(m.data)[0];
       logger.info('Received control %v', ctrl);
@@ -247,13 +253,15 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
     }
   });
   var updatedCtrls = proceedControls(state.game, ctrls);
-  proceedGameLoop(state.game);
+  var movedIds = proceedGameLoop(state.game);
+  var updatedIds = __spreadArray(__spreadArray([], movedIds, true), newIds, true);
   if (updatedCtrls.length) {
     var data = encodeControls(updatedCtrls);
     dispatcher.broadcastMessage(1, data);
   }
-  if (tick % 40 === 0) {
-    var data = encodeAllShooters(state.game);
+  if (updatedIds.length) {
+    logger.info('updatedIds %v', updatedIds);
+    var data = encodeAllShooters(state.game, updatedIds);
     if (data.byteLength > 1) dispatcher.broadcastMessage(0, data);
   }
   return {
@@ -284,8 +292,6 @@ var pixelShooterMatchHandlers = {
   matchSignal: matchSignal,
   matchTerminate: matchTerminate
 };
-!TextEncoder && TextEncoder.bind(null);
-!TextDecoder && TextDecoder.bind(null);
 
 function InitModule(ctx, logger, nk, initializer) {
   logger.info('Hello World!');

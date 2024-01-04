@@ -1,5 +1,5 @@
 import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters, proceedGameLoop } from 'adventure_engine/dist/shooting'
-import { TextDecoder, TextEncoder } from '../encode'
+// import { TextDecoder, TextEncoder } from '../encode'
 
 interface MatchState {
   presences: {[userId: string]: nkruntime.Presence}
@@ -22,7 +22,7 @@ function matchInit(
 
   return {
       state: { presences, game },
-      tickRate: 20,
+      tickRate: 5,
       label: 'PixelShooter'
   }
 }
@@ -98,14 +98,16 @@ function matchLoop(
   messages: nkruntime.MatchMessage[]
 ) : { state: MatchState } | null {
   const ctrls: CharacterControl[] = []
+  const newIds: number[] = []
   // const newShooters: CharacterAttrs[] = []
 
   messages.forEach(m => {
     if (m.opCode === 0) {
       // add new shooter
-      const attrs = decodeAttrsArray(m.data)[0]
-      logger.info('Received new shooter %v', attrs)
-      addShooter(state.game, attrs.x, attrs.y)
+      const decoded = decodeAttrsArray(m.data)[0]
+      logger.info('Received new shooter %v', decoded)
+      const attrs = addShooter(state.game, decoded.x, decoded.y)
+      newIds.push(attrs.id)
     } else if (m.opCode === 1) {
       // control
       const ctrl = decodeControls(m.data)[0]
@@ -123,7 +125,8 @@ function matchLoop(
   const updatedCtrls = proceedControls(state.game, ctrls)
 
   // proceed game loop
-  proceedGameLoop(state.game)
+  const movedIds = proceedGameLoop(state.game)
+  const updatedIds = [...movedIds,...newIds]
 
   if (updatedCtrls.length) {
     // const data = encodeShootingGameUpdates(updates)
@@ -131,11 +134,17 @@ function matchLoop(
     dispatcher.broadcastMessage(1, data)
   }
 
-  if (tick % 40 === 0) {
-    // send all attrs data to all clients
-    const data = encodeAllShooters(state.game)
+  if (updatedIds.length) {
+    logger.info('updatedIds %v', updatedIds)
+    const data = encodeAllShooters(state.game, updatedIds)
     if (data.byteLength > 1) dispatcher.broadcastMessage(0, data)
   }
+
+  // if (tick % 40 === 0) {
+  //   // send all attrs data to all clients
+  //   const data = encodeAllShooters(state.game)
+  //   if (data.byteLength > 1) dispatcher.broadcastMessage(0, data)
+  // }
 
   return {
     state
@@ -188,5 +197,5 @@ export const pixelShooterMatchHandlers: nkruntime.MatchHandler<MatchState> = {
   matchTerminate
 }
 
-!TextEncoder && TextEncoder.bind(null);
-!TextDecoder && TextDecoder.bind(null);
+// !TextEncoder && TextEncoder.bind(null);
+// !TextDecoder && TextDecoder.bind(null);
