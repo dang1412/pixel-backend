@@ -1,0 +1,63 @@
+{"frames": {
+
+"Walk_knife_000.png":
+{
+	"frame": {"x":398,"y":787,"w":376,"h":391},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":114,"y":0,"w":376,"h":391},
+	"sourceSize": {"w":542,"h":402}
+},
+"Walk_knife_001.png":
+{
+	"frame": {"x":437,"y":395,"w":426,"h":390},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":73,"y":12,"w":426,"h":390},
+	"sourceSize": {"w":542,"h":402}
+},
+"Walk_knife_002.png":
+{
+	"frame": {"x":1,"y":392,"w":434,"h":389},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":67,"y":13,"w":434,"h":389},
+	"sourceSize": {"w":542,"h":402}
+},
+"Walk_knife_003.png":
+{
+	"frame": {"x":1,"y":783,"w":382,"h":395},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":109,"y":1,"w":382,"h":395},
+	"sourceSize": {"w":542,"h":402}
+},
+"Walk_knife_004.png":
+{
+	"frame": {"x":447,"y":1,"w":417,"h":392},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":80,"y":10,"w":417,"h":392},
+	"sourceSize": {"w":542,"h":402}
+},
+"Walk_knife_005.png":
+{
+	"frame": {"x":1,"y":1,"w":444,"h":389},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":61,"y":10,"w":444,"h":389},
+	"sourceSize": {"w":542,"h":402}
+}},
+"animations": {
+	"Walk_knife": ["Walk_knife_000.png","Walk_knife_001.png","Walk_knife_002.png","Walk_knife_003.png","Walk_knife_004.png","Walk_knife_005.png"]
+},
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.1",
+	"image": "walk_knife.png",
+	"format": "RGBA8888",
+	"size": {"w":865,"h":1166},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:cf04948b48e41f67b31c28dbcee8e31e:b1a45e71e2339dfad70957193ab3eae4:0cdae3ba5152c6935b1bf87bab7da120$"
+}
+}

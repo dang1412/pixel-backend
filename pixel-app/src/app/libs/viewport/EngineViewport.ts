@@ -46,7 +46,8 @@ export class EngineViewport {
   // event listeners
   private handlersMap: Map<string, Function[]> = new Map()
 
-  // Event Listeners
+  //
+  alwaysRender = false
 
   on(event: string, handler: Function) {
     const funcs = this.handlersMap.get(event) || []
@@ -270,9 +271,9 @@ export class EngineViewport {
   }
 
   private runUpdate() {
-    if (this.viewport.dirty) {
+    if (this.alwaysRender || this.viewport.dirty) {
       // render wrapper includes minimap and viewport
-      console.log('render ticks length', this.ticks.length)
+      // console.log('render ticks length', this.ticks.length)
       this.renderer.render(this.wrapper)
       this.viewport.dirty = false
       for (const tick of this.ticks) {
@@ -281,6 +282,7 @@ export class EngineViewport {
     }
 
     requestAnimationFrame(() => this.runUpdate())
+    // setTimeout(() => this.runUpdate(), 40)
   }
 
   private setupMouseEvents() {
@@ -316,7 +318,7 @@ export class EngineViewport {
       const scene = this.getCurrentScene()
       if (scene) {
         const [px, py] = scene.getViewportCoord(cx, cy)
-        this.emit('mousemove', ex, ey, px, py)
+        this.emit('mousemove', ex, ey, px, py, cx, cy)
       }
     }
 
@@ -389,14 +391,16 @@ export class EngineViewport {
       const [x, y] = getXY(e)
       const [px, py] = scene.getViewportCoord(x, y)
 
-      // type 'beast', 'item' or 'building'
       const type = e.dataTransfer?.getData('type')
-      const id = e.dataTransfer?.getData('id')
       if (type === 'beast' || type === 'item' || type === 'building') {
+        // type 'beast', 'item' or 'building'
+        const id = e.dataTransfer?.getData('id')
         console.log(`drop ${type}`, id, px, py)
         if (id) {
           this.emit(`drop${type}`, Number(id), px, py)
         }
+      } else {
+        this.emit(`drop${type}`, px, py)
       }
     })
 

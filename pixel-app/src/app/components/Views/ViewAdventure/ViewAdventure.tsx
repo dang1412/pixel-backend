@@ -1,4 +1,4 @@
-import React, { use, useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { FaGun, FaPersonWalking, FaTurnUp, FaRegHandLizard  } from 'react-icons/fa6'
 
 import { EngineViewport, PixelAdventure, PixelArea, PixelImage, PixelMap } from '@/libs/viewport'
@@ -11,25 +11,9 @@ import { ALL_IMAGES, beastImageMap, buildingImages, itemImages } from '@/libs/vi
 
 const controlClass = 'rounded bg-gray-400 p-1 mx-1 text-lg text-gray-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-white'
 
-// const beastImages = [
-//   '/images/axie.png',
-//   '/images/axie2.png',
-//   '/images/axie3.png',
-//   '/images/axie4.png',
-//   '/images/ghost.png',
-//   '/images/amu1.png',
-//   '/images/amu2.png',
-//   '/animations/saitama-stand.png',
-//   '/animations/venom.png',
-// ]
-
 const beastImages = Object.keys(beastImageMap).sort().map(type => beastImageMap[Number(type)]).map(key => ALL_IMAGES[key] || '')
 const itemIds = Object.keys(itemImages).map(id => Number(id)).sort()
 const buildingIds = Object.keys(buildingImages).map(id => Number(id)).sort()
-// const itemImages: { [id: number]: string } = {
-//   1: '/svgs/power.svg',
-//   2: '/svgs/rocket.svg'
-// }
 
 interface Props {
   images?: PixelImage[]

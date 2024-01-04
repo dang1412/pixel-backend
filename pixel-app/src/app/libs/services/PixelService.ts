@@ -1,3 +1,5 @@
+import { Client, Socket } from '@heroiclabs/nakama-js'
+
 import { web3Accounts, web3Enable } from '@polkadot/extension-dapp'
 import type { InjectedAccountWithMeta } from '@polkadot/extension-inject/types'
 import { ApiPromise, WsProvider } from '@polkadot/api'
@@ -18,6 +20,7 @@ import { ApiPixel, ApiPixelImage, IIPFSService } from './types'
 import { AccountState, appGlobal } from '../states'
 import { LotteryService } from './LotteryService'
 import { AdventureService } from './AdventureService'
+import { ShooterService } from './ShooterService'
 
 const wsProvider = new WsProvider(WS_ENDPOINT)
 
@@ -46,6 +49,7 @@ export class PixelService {
 
   lotteryService: LotteryService
   adventureService: AdventureService
+  shooterService: ShooterService
 
   constructor(public api: ApiPromise, public ipfs: IIPFSService) {
     this.contract = new ContractPromise(
@@ -54,8 +58,16 @@ export class PixelService {
       CONTRACT_ADDRESS
     )
 
+    const ssl = false
+    const client = new Client('defaultkey', '192.168.1.96', '7350', ssl)
+    
+    // const ssl = true
+    // const client = new Client('defaultkey', 'api.millionpixelland.com', '443', ssl)
+    // const socket = client.createSocket(true)
+
     this.lotteryService = new LotteryService(api)
-    this.adventureService = new AdventureService(api)
+    this.adventureService = new AdventureService(api, client, ssl)
+    this.shooterService = new ShooterService(client, ssl)
   }
 
   async uploadImageWithUrl(url: string): Promise<string> {
