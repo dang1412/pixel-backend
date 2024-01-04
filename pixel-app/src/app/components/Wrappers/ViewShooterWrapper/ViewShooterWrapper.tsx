@@ -22,7 +22,6 @@ export function ViewShooterWrapper() {
 
   const onInitGame = useCallback(async (game: PixelShooter) => {
     const service = (await PixelService.getInstance()).shooterService
-    await service.joinMatch()
     await game.load()
 
     // request control
@@ -43,6 +42,8 @@ export function ViewShooterWrapper() {
       console.log('Handle all shooter sync', attrsArr)
       game.updateMatch(attrsArr)
     }
+
+    await service.joinMatch()
 
     // service.requestCtrl(1, { up: false, down: false, left: false, right: true, fire: false, weapon: 2, angle: 10, id: 1 })
 

@@ -1,6 +1,6 @@
-import { AnimatedSprite, Assets, Container } from 'pixi.js'
+import { Assets } from 'pixi.js'
 
-import { CharacterAttrs, CharacterControl, ShootingGameStateUpdates, ctrlEqual, defaultCharacterAttrs } from 'adventure_engine/dist/shooting'
+import { CharacterAttrs, CharacterControl, ctrlEqual, defaultCharacterAttrs } from 'adventure_engine/dist/shooting'
 
 import { PixelMap } from '../PixelMap'
 import { Shooter } from './Shooter'
@@ -9,12 +9,31 @@ import { manifest } from './constants'
 export class PixelShooter {
 
   idCharacterMap: {[id: number]: Shooter} = {}
-  selectingShooterId = 1
+  selectingShooterId = 0
 
   private lastCtrl: CharacterControl | undefined
 
   constructor(public map: PixelMap) {
     map.engine.alwaysRender = true
+  }
+
+  select(id: number) {
+    // deselect
+    const prevSelect = this.selectingShooterId
+    const prevChar = this.idCharacterMap[prevSelect]
+    if (prevChar) {
+      prevChar.showSelect(false)
+    }
+
+    if (id !== this.selectingShooterId) {
+      const char = this.idCharacterMap[id]
+      if (char) {
+        char.showSelect(true)
+        this.selectingShooterId = id
+      }
+    } else {
+      this.selectingShooterId = 0
+    }
   }
 
   async load() {
@@ -32,9 +51,10 @@ export class PixelShooter {
     await Assets.loadBundle('man-walk-bat')
     await Assets.loadBundle('man-hit-bat')
 
-    console.log('Done loading')
+    Assets.add({alias: 'shooter_select', src: '/shooter/circle.png'})
+    await Assets.load('shooter_select')
 
-    // await Assets.load<Spritesheet>('/sho*}{_oter/Walk_knife/walk_knife.json')
+    console.log('Done loading')
 
     // mouse move
     this.map.engine.on('mousemove', (ex: number, ey: number, px: number, py: number, cx: number, cy: number) => {
@@ -45,8 +65,6 @@ export class PixelShooter {
     })
 
     this.map.engine.on('dropman', (px: number, py: number) => {
-      // mockdata
-      // this.addShooter(1, {hp: 100, angle: 0, weapon: 1, x: px * 100, y: py * 100})
       // request onMatch new shooter
       this.requestAddShooter(px * 100, py * 100)
     })
@@ -54,6 +72,7 @@ export class PixelShooter {
     // key pressed
     document.addEventListener('keydown', (e) => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
+      if (!shooter) return
       if (e.key === '1') {  // knife
         shooter.ctrl.weapon = 1
       } else if (e.key === '2') { // gun
@@ -82,6 +101,7 @@ export class PixelShooter {
     })
     document.addEventListener('keyup', (e) => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
+      if (!shooter) return
       if (e.key === 'a') {
         shooter.ctrl.left = false
       } else if (e.key === 'd') {
@@ -109,20 +129,26 @@ export class PixelShooter {
           this.requestCtrl(shooter.ctrl)
         }
       }
-      tickCount = (tickCount + 1) % 15
+      tickCount = (tickCount + 1) % 2
     })
   }
 
   addShooter(id: number, attrs?: CharacterAttrs) {
     if (!this.idCharacterMap[id]) {
-      this.idCharacterMap[id] = new Shooter(this.map, id, {...defaultCharacterAttrs, ...attrs})
+      this.idCharacterMap[id] = new Shooter(this, id, {...defaultCharacterAttrs, ...attrs})
     }
   }
 
   updateCtrls(ctrls: CharacterControl[]) {
     for (let ctrl of ctrls) {
       const char = this.idCharacterMap[ctrl.id]
-      if (char) {
+      if (!char) continue
+
+      if (ctrl.id === this.selectingShooterId && !ctrlEqual(char.ctrl, ctrl)) {
+        // chances are the current ctrl is newer, update server
+        this.requestCtrl(char.ctrl)
+      } else {
+        // update
         char.ctrl = ctrl
       }
     }
