@@ -1,4 +1,4 @@
-import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters, proceedGameLoop } from 'adventure_engine/dist/shooting'
+import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters } from 'adventure_engine/dist/shooting'
 // import { TextDecoder, TextEncoder } from '../encode'
 
 interface MatchState {
@@ -59,8 +59,7 @@ function matchJoin(
     logger.info('%q joined Adventure match', presence.userId)
   })
 
-  // dispatcher.broadcastMessage(0, data.buffer.slice(data.byteOffset), presences, undefined, true)
-  // TODO get current game state
+  // get current game state
   const data = encodeAllShooters(state.game)
   dispatcher.broadcastMessage(0, data, presences)
 
@@ -99,7 +98,6 @@ function matchLoop(
 ) : { state: MatchState } | null {
   const ctrls: CharacterControl[] = []
   const newIds: number[] = []
-  // const newShooters: CharacterAttrs[] = []
 
   messages.forEach(m => {
     if (m.opCode === 0) {
@@ -115,21 +113,15 @@ function matchLoop(
       ctrls.push(ctrl)
     }
   })
-  
-  // messages.map(m => decodeControls(m.data)[0])
-  // ctrls.forEach((ctrl) => {
-  //   logger.info('Received action %v', ctrl)
-  // })
 
   // update match states and get changes
-  const updatedCtrls = proceedControls(state.game, ctrls)
+  const [updatedCtrls, movedIds] = proceedControls(state.game, ctrls, 25)
 
   // proceed game loop
-  const movedIds = proceedGameLoop(state.game)
   const updatedIds = [...movedIds,...newIds]
 
   if (updatedCtrls.length) {
-    // const data = encodeShootingGameUpdates(updates)
+    logger.info('updatedCtrls %v', updatedCtrls)
     const data = encodeControls(updatedCtrls)
     dispatcher.broadcastMessage(1, data)
   }
@@ -137,14 +129,8 @@ function matchLoop(
   if (updatedIds.length) {
     logger.info('updatedIds %v', updatedIds)
     const data = encodeAllShooters(state.game, updatedIds)
-    if (data.byteLength > 1) dispatcher.broadcastMessage(0, data)
+    dispatcher.broadcastMessage(0, data)
   }
-
-  // if (tick % 40 === 0) {
-  //   // send all attrs data to all clients
-  //   const data = encodeAllShooters(state.game)
-  //   if (data.byteLength > 1) dispatcher.broadcastMessage(0, data)
-  // }
 
   return {
     state
