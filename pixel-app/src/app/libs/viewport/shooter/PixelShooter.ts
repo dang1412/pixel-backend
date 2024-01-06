@@ -1,6 +1,6 @@
 import { Assets } from 'pixi.js'
 
-import { CharacterAttrs, CharacterControl, ctrlEqual, defaultCharacterAttrs } from 'adventure_engine/dist/shooting'
+import { CharacterAttrs, CharacterControl, ctrlEqual, defaultCharacterAttrs, proceedAttrsByCtrl } from 'adventure_engine/dist/shooting'
 
 import { PixelMap } from '../PixelMap'
 import { Shooter } from './Shooter'
@@ -38,19 +38,20 @@ export class PixelShooter {
 
   async load() {
     Assets.init({ manifest })
-    await Assets.loadBundle('man-idle-knife')
-    await Assets.loadBundle('man-walk-knife')
-    await Assets.loadBundle('man-hit-knife')
-    await Assets.loadBundle('man-idle-gun')
-    await Assets.loadBundle('man-walk-gun')
-    await Assets.loadBundle('man-hit-gun')
-    await Assets.loadBundle('man-idle-riffle')
-    await Assets.loadBundle('man-walk-riffle')
-    await Assets.loadBundle('man-hit-riffle')
-    await Assets.loadBundle('man-idle-bat')
-    await Assets.loadBundle('man-walk-bat')
-    await Assets.loadBundle('man-hit-bat')
-
+    await Assets.loadBundle([
+      'man-idle-knife',
+      'man-walk-knife',
+      'man-hit-knife',
+      'man-idle-gun',
+      'man-walk-gun',
+      'man-hit-gun',
+      'man-idle-riffle',
+      'man-walk-riffle',
+      'man-hit-riffle',
+      'man-idle-bat',
+      'man-walk-bat',
+      'man-hit-bat',
+    ])
     Assets.add({alias: 'shooter_select', src: '/pixel_shooter/circle.png'})
     await Assets.load('shooter_select')
 
@@ -120,17 +121,31 @@ export class PixelShooter {
     })
 
     // request ctrl periodically
-    let tickCount = 0
-    this.map.engine.addTick(() => {
+    let count = 0
+    setInterval(() => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
-      if (tickCount === 0 && shooter) {
-        if (!this.lastCtrl || !ctrlEqual(shooter.ctrl, this.lastCtrl)) {
-          this.lastCtrl = Object.assign({}, shooter.ctrl)
-          this.requestCtrl(shooter.ctrl)
-        }
+      if (!shooter) return
+      const moved = shooter.ctrl.up || shooter.ctrl.down || shooter.ctrl.left || shooter.ctrl.right
+      const controlled =  moved || shooter.ctrl.fire || this.lastCtrl?.weapon !== shooter.ctrl.weapon || this.lastCtrl?.angle !== shooter.ctrl.angle
+      if (controlled) {
+        this.lastCtrl = Object.assign({}, shooter.ctrl)
+        // request control to server
+        this.requestCtrl(shooter.ctrl)
+        // predict own move
+        proceedAttrsByCtrl(shooter.attrs, shooter.ctrl, 25)
       }
-      tickCount = (tickCount + 1) % 5
-    })
+
+      if (!moved) {
+        // counting
+        count ++
+        if (count > 3) {
+          // update with latest server values if stand for more than 3 counts
+          shooter.updateWithLatestServer()
+        }
+      } else {
+        count = 0
+      }
+    }, 80)
   }
 
   addShooter(id: number, attrs?: CharacterAttrs) {
@@ -144,12 +159,11 @@ export class PixelShooter {
       const char = this.idCharacterMap[ctrl.id]
       if (!char) continue
 
-      if (ctrl.id === this.selectingShooterId && !ctrlEqual(char.ctrl, ctrl)) {
-        // chances are the current ctrl is newer, update server
-        this.requestCtrl(char.ctrl)
-      } else {
-        // update
-        char.ctrl = ctrl
+      if (ctrl.id !== this.selectingShooterId) {
+        // update from server
+        char.ctrl.weapon = ctrl.weapon
+        char.ctrl.fire = ctrl.fire
+        char.ctrl.angle = ctrl.angle
       }
     }
   }
@@ -161,8 +175,12 @@ export class PixelShooter {
         this.addShooter(id, attrs)
 
         const shooter = this.idCharacterMap[id]
-        // update current attrs
-        shooter.attrs = attrs
+        // latest server values, for being controlled character to update when stop moving
+        shooter.setLatestServer(attrs.x, attrs.y)
+        if (id !== this.selectingShooterId) {
+          // update current attrs
+          shooter.attrs = attrs
+        }
       }
     }
   }

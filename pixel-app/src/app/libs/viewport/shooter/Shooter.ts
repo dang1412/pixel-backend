@@ -11,16 +11,24 @@ export class Shooter {
 
   container = new Container()
   keysPressed: { [key: string]: boolean } = {}
-  speed = 6
+  speed = 5
   // weapon: 'knife' | 'gun' | 'riffle' | 'bat' = 'riffle'
   gender = 'man'
 
   char: AnimatedSprite
 
+  // only use angle, weapon to draw
   ctrl: CharacterControl
 
   private curX = 0
   private curY = 0
+
+  // latest server updated position for controlling character,
+  // update attrs x, y with these values when not controlling
+  // for other not controlling characters,
+  // update attrs x, y with server values immediately, hence not use these
+  private latestServerX = 0
+  private latestServerY = 0
 
   private selectingCircle = new Sprite()
 
@@ -60,6 +68,16 @@ export class Shooter {
     container.on('click', () => this.game.select(this.id))
   }
 
+  setLatestServer(x: number, y: number) {
+    this.latestServerX = x
+    this.latestServerY = y
+  }
+
+  updateWithLatestServer() {
+    this.attrs.x = this.latestServerX
+    this.attrs.y = this.latestServerY
+  }
+
   showSelect(visible: boolean) {
     this.selectingCircle.visible = visible
   }
@@ -73,7 +91,7 @@ export class Shooter {
   }
 
   private updateByCtrl() {
-    let moving = this.ctrl.left || this.ctrl.right || this.ctrl.up || this.ctrl.down
+    // let moving = this.ctrl.left || this.ctrl.right || this.ctrl.up || this.ctrl.down
     // if (this.curX === this.attrs.x && this.curY === this.attrs.y) {
     //   if (this.ctrl.left) {
     //     this.attrs.x -= this.speed
@@ -88,11 +106,13 @@ export class Shooter {
     //     this.attrs.x += this.speed
     //   }
     // } else {
-      this.updatePos()
+    const moving = !(this.curX === this.attrs.x && this.curY === this.attrs.y)
+    this.updatePos()
     // }
 
     if (this.ctrl.fire) {
       this.char.switchOnce(`man-hit-${weapons[this.ctrl.weapon]}`, 0.04)
+      if (!this.selectingCircle.visible) this.ctrl.fire = false
     } else if (moving) {
       this.char.switch(`man-walk-${weapons[this.ctrl.weapon]}`)
     } else {
