@@ -140,58 +140,53 @@ var defaultCharacterControl = {
   id: 0
 };
 
-var characterSpeed = 80;
-function ctrlEqual(c1, c2) {
-  if (!c1 || !c2) return false;
-  return c1.down === c2.down && c1.fire === c2.fire && c1.id === c2.id && c1.left === c2.left && c1.right === c2.right && c1.up === c2.up && c1.weapon === c2.weapon;
-}
-function proceedControls(state, ctrls) {
+var characterSpeed = 60;
+function proceedControls(state, ctrls, speed) {
   var idCtrlMap = {};
   for (var _i = 0, ctrls_1 = ctrls; _i < ctrls_1.length; _i++) {
     var ctrl = ctrls_1[_i];
     var id = ctrl.id;
-    if (!idCtrlMap[id] && !ctrlEqual(state.characterCtrlMap[id], ctrl)) {
-      state.characterCtrlMap[id] = ctrl;
-      idCtrlMap[id] = ctrl;
+    if (idCtrlMap[id]) {
+      ctrl.fire = idCtrlMap[id].fire || ctrl.fire;
+    }
+    idCtrlMap[id] = ctrl;
+  }
+  var updatedCtrls = Object.values(idCtrlMap);
+  var idSet = new Set();
+  for (var _a = 0, ctrls_2 = ctrls; _a < ctrls_2.length; _a++) {
+    var ctrl = ctrls_2[_a];
+    var id = ctrl.id;
+    var attrs = state.characterAttrsMap[id];
+    if (attrs) {
+      var moved = proceedAttrsByCtrl(attrs, ctrl, speed);
+      if (moved) idSet.add(id);
     }
   }
-  return Object.values(idCtrlMap);
+  return [updatedCtrls, Array.from(idSet)];
 }
-function proceedGameLoop(state) {
-  var ids = [];
-  for (var _i = 0, _a = Object.keys(state.characterAttrsMap); _i < _a.length; _i++) {
-    var key = _a[_i];
-    var id = Number(key);
-    var moved = proceedGameLoopCharId(state, id);
-    if (moved) ids.push(id);
+function proceedAttrsByCtrl(attrs, ctrl, speed) {
+  if (speed === void 0) {
+    speed = characterSpeed;
   }
-  return ids;
-}
-function proceedGameLoopCharId(state, id) {
-  var attrs = state.characterAttrsMap[id];
-  var ctrl = state.characterCtrlMap[id];
-  if (attrs && ctrl) {
-    var moved = false;
-    if (ctrl.left) {
-      attrs.x -= characterSpeed;
-      moved = true;
-    }
-    if (ctrl.up) {
-      attrs.y -= characterSpeed;
-      moved = true;
-    }
-    if (ctrl.down) {
-      attrs.y += characterSpeed;
-      moved = true;
-    }
-    if (ctrl.right) {
-      attrs.x += characterSpeed;
-      moved = true;
-    }
-    if (ctrl.fire) ;
-    return moved;
+  var moved = false;
+  if (ctrl.left) {
+    attrs.x -= speed;
+    moved = true;
   }
-  return false;
+  if (ctrl.up) {
+    attrs.y -= speed;
+    moved = true;
+  }
+  if (ctrl.down) {
+    attrs.y += speed;
+    moved = true;
+  }
+  if (ctrl.right) {
+    attrs.x += speed;
+    moved = true;
+  }
+  if (ctrl.fire) ;
+  return moved;
 }
 function addShooter(state, x, y) {
   var id = 1;
@@ -1214,17 +1209,19 @@ function matchLoop$1(ctx, logger, nk, dispatcher, tick, state, messages) {
       ctrls.push(ctrl);
     }
   });
-  var updatedCtrls = proceedControls(state.game, ctrls);
-  var movedIds = proceedGameLoop(state.game);
+  var _a = proceedControls(state.game, ctrls, 25),
+    updatedCtrls = _a[0],
+    movedIds = _a[1];
   var updatedIds = __spreadArray(__spreadArray([], movedIds, true), newIds, true);
   if (updatedCtrls.length) {
+    logger.info('updatedCtrls %v', updatedCtrls);
     var data = encodeControls(updatedCtrls);
     dispatcher.broadcastMessage(1, data);
   }
   if (updatedIds.length) {
     logger.info('updatedIds %v', updatedIds);
     var data = encodeAllShooters(state.game, updatedIds);
-    if (data.byteLength > 1) dispatcher.broadcastMessage(0, data);
+    dispatcher.broadcastMessage(0, data);
   }
   return {
     state: state

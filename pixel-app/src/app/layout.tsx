@@ -31,6 +31,7 @@ const navigation = [
   { name: 'PixelLand', href: '/', current: true },
   { name: 'Lottery', href: '/lottery', current: false },
   { name: 'Adventures', href: '/adventures', current: false },
+  { name: 'Shooter', href: '/shooter', current: false },
 ]
 
 function classNames(...classes: string[]) {
