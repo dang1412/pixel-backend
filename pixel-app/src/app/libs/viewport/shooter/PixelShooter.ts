@@ -1,10 +1,11 @@
 import { Assets } from 'pixi.js'
 
-import { CharacterAttrs, CharacterControl, ctrlEqual, defaultCharacterAttrs, proceedAttrsByCtrl } from 'adventure_engine/dist/shooting'
+import { CharacterAttrs, CharacterControl, ctrlEqual, defaultCharacterAttrs, proceedAttrsByCtrl, shootFirstHitObject } from 'adventure_engine/dist/shooting'
 
 import { PixelMap } from '../PixelMap'
 import { Shooter } from './Shooter'
-import { manifest } from './constants'
+import { gunhitState, manifest } from './constants'
+import { AnimatedSprite } from './AnimatedSprite'
 
 export class PixelShooter {
 
@@ -51,6 +52,7 @@ export class PixelShooter {
       'man-idle-bat',
       'man-walk-bat',
       'man-hit-bat',
+      'gunhit',
     ])
     Assets.add({alias: 'shooter_select', src: '/pixel_shooter/circle.png'})
     await Assets.load('shooter_select')
@@ -71,6 +73,7 @@ export class PixelShooter {
     })
 
     // key pressed
+    let lastFireTime = 0
     document.addEventListener('keydown', (e) => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
       if (!shooter) return
@@ -95,6 +98,10 @@ export class PixelShooter {
       }
 
       if (e.key === 'f') {
+        // let time = Date.now()
+        // if (time - lastFireTime > 1000) {
+          
+        // }
         shooter.ctrl.fire = true
       }
       
@@ -133,12 +140,14 @@ export class PixelShooter {
         this.requestCtrl(shooter.ctrl)
         // predict own move
         proceedAttrsByCtrl(shooter.attrs, shooter.ctrl, 25)
+        // predict own shoot
+        // if (shooter.ctrl.fire) this.shoot(this.selectingShooterId)
       }
 
       if (!moved) {
         // counting
         count ++
-        if (count > 3) {
+        if (count > 4) {
           // update with latest server values if stand for more than 3 counts
           shooter.updateWithLatestServer()
         }
@@ -165,6 +174,32 @@ export class PixelShooter {
         char.ctrl.fire = ctrl.fire
         char.ctrl.angle = ctrl.angle
       }
+
+      if (ctrl.fire) {
+        if (ctrl.weapon === 2 || ctrl.weapon === 3) this.shoot(ctrl.id)
+      }
+    }
+  }
+
+  shoot(id: number) {
+    const char = this.idCharacterMap[id]
+    if (!char) return
+
+    const objs: [number, number, number, number][] = Object.values(this.idCharacterMap).map(char => [char.attrs.x - 50, char.attrs.y - 50, 100, 100])
+    const angle = char.ctrl.angle / 100 - 1.5 * Math.PI
+    const hitP = shootFirstHitObject(char.attrs.x, char.attrs.y, angle, objs)
+
+    console.log('hitP', objs, hitP)
+    if (hitP) {
+      const animatedHit = new AnimatedSprite(gunhitState)
+      animatedHit.speed = 0.1
+      animatedHit.sprite.rotation = angle + Math.PI / 2
+      this.map.scene.getMainContainer().addChild(animatedHit.sprite)
+      this.map.scene.setImagePosition(animatedHit.sprite, hitP[0] / 100, hitP[1] / 100, 1, 1)
+
+      animatedHit.start(() => {
+        this.map.scene.getMainContainer().removeChild(animatedHit.sprite)
+      })
     }
   }
 

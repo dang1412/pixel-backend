@@ -58,9 +58,7 @@ export class Shooter {
     this.curY = this.attrs.y
     scene.setImagePosition(container, this.attrs.x / 100, this.attrs.y / 100, 1.2, 1.2)
 
-
-    char.sprite.anchor.set(0.5, 0.5)
-    char.play()
+    char.start()
 
     engine.addTick(() => this.updateByCtrl())
 

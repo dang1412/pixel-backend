@@ -153,6 +153,13 @@ export const manifest: AssetsManifest = {
       }
     },
     {
+      name: 'gunhit',
+      assets: {
+        'gun_02': '/pixel_shooter/gun_02.png',
+        'gun_03': '/pixel_shooter/gun_03.png',
+      }
+    },
+    {
       name: 'sample',
       assets: {
 
@@ -173,3 +180,4 @@ function manifestToCharacterStates(manifest: AssetsManifest): {[state: string]: 
 }
 
 export const characterStates = manifestToCharacterStates(manifest)
+export const gunhitState = {'gunhit': ['gun_02', 'gun_03']}
