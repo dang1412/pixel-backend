@@ -96,12 +96,24 @@ function shootHitObject(x: number, y: number, angle: number, obj: [number, numbe
   return hitPoint
 }
 
+/**
+ * 
+ * @param x 
+ * @param y 
+ * @param angle 
+ * @param objs 
+ * @returns [index, x, y] of the first hit
+ */
 export function shootFirstHitObject(x: number, y: number, angle: number, objs: [number, number, number, number][]): [number, number, number] | null {
   let firstHit: [number, number, number] | null = null
-  for (const obj of objs) {
+  let distance = 0
+  for (let i = 0; i < objs.length; i++) {
+    const obj = objs[i]
     const hitP = shootHitObject(x, y, angle, obj)
-    if (hitP && (!firstHit || firstHit[2] > hitP[2])) {
-      firstHit = hitP
+    if (hitP && (!firstHit || distance > hitP[2])) {
+      // [index, x, y]
+      firstHit = [i, hitP[0], hitP[1]]
+      distance = hitP[2]
     }
   }
 

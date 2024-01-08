@@ -163,6 +163,7 @@ export class PixelShooter {
     }
   }
 
+  // process ctrl signals from server
   updateCtrls(ctrls: CharacterControl[]) {
     for (let ctrl of ctrls) {
       const char = this.idCharacterMap[ctrl.id]
@@ -176,11 +177,13 @@ export class PixelShooter {
       }
 
       if (ctrl.fire) {
+        // perform shoot locally
         if (ctrl.weapon === 2 || ctrl.weapon === 3) this.shoot(ctrl.id)
       }
     }
   }
 
+  // perform shoot locally
   shoot(id: number) {
     const char = this.idCharacterMap[id]
     if (!char) return
@@ -195,7 +198,7 @@ export class PixelShooter {
       animatedHit.speed = 0.1
       animatedHit.sprite.rotation = angle + Math.PI / 2
       this.map.scene.getMainContainer().addChild(animatedHit.sprite)
-      this.map.scene.setImagePosition(animatedHit.sprite, hitP[0] / 100, hitP[1] / 100, 1, 1)
+      this.map.scene.setImagePosition(animatedHit.sprite, hitP[1] / 100, hitP[2] / 100, 1, 1)
 
       animatedHit.start(() => {
         this.map.scene.getMainContainer().removeChild(animatedHit.sprite)
@@ -203,6 +206,7 @@ export class PixelShooter {
     }
   }
 
+  // update 
   updateMatch(attrsArr: CharacterAttrs[]) {
     for (const attrs of attrsArr) {
       const id = attrs.id
