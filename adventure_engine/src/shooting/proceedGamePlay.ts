@@ -1,3 +1,4 @@
+import { shootFirstHitObject } from './calculateShoot'
 import { encodeAttrsArray } from './encodeFuncs'
 import { CharacterAttrs, CharacterControl, ShootingGameState, defaultCharacterAttrs, defaultCharacterControl } from './types'
 
@@ -16,6 +17,18 @@ export function ctrlEqual(c1: CharacterControl, c2: CharacterControl): boolean {
     && c1.weapon === c2.weapon
 }
 
+export function cleanupDeadChars(state: ShootingGameState) {
+  const ids = Object.keys(state.characterAttrsMap)
+  for (const idstr of ids) {
+    const id = Number(idstr)
+    const attrs = state.characterAttrsMap[id]
+    if (attrs && attrs.hp <= 0) {
+      delete state.characterAttrsMap[id]
+      delete state.characterCtrlMap[id]
+    }
+  }
+}
+
 export function proceedControls(state: ShootingGameState, ctrls: CharacterControl[], speed?: number): [CharacterControl[], number[]] {
   const idCtrlMap: {[id: number]: CharacterControl} = {}
   
@@ -29,12 +42,32 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
     idCtrlMap[id] = ctrl
   }
 
-  // execute fires TODO
+  const idSet = new Set<number>()
+
+  // execute fires
   const updatedCtrls = Object.values(idCtrlMap)
+  const charObjs: [number, number, number, number, number][] = Object.values(state.characterAttrsMap).map(attrs => [attrs.id, attrs.x - 50, attrs.y - 50, 100, 100])
+  for (const ctrl of updatedCtrls) {
+    if (ctrl.fire) {
+      const attrs = state.characterAttrsMap[ctrl.id]
+      const angle = ctrl.angle / 100 - 1.5 * Math.PI
+      const hitP = attrs ? shootFirstHitObject(attrs.x, attrs.y, angle, charObjs) : null
+      if (hitP) {
+        const targetAttrs = state.characterAttrsMap[hitP[0]]
+        if (targetAttrs) {
+          targetAttrs.hp -= 5
+          idSet.add(targetAttrs.id)
+          if (targetAttrs.hp <= 0) {
+            // character die
+            // delete state.characterAttrsMap[targetAttrs.id]
+          }
+        }
+      }
+    }
+  }
 
   // execute move
   
-  const idSet = new Set<number>()
   for (const ctrl of ctrls) {
     const id = ctrl.id
     const attrs = state.characterAttrsMap[id]
@@ -78,13 +111,6 @@ export function proceedAttrsByCtrl(attrs: CharacterAttrs, ctrl: CharacterControl
     moved = true
   }
 
-  if (ctrl.fire) {
-    // TODO fire
-    // check if alive
-    // check if too close to last fire
-    // fire
-  }
-
   return moved
 }
 
@@ -125,7 +151,7 @@ export function encodeAllShooters(state: ShootingGameState, ids?: number[]): Arr
 }
 
 function getAttrsArr(state: ShootingGameState, ids: number[]): CharacterAttrs[] {
-  const attrsArr = ids.map(id => state.characterAttrsMap[id])
+  const attrsArr = ids.map(id => state.characterAttrsMap[id]).filter(attrs => attrs)
 
   return attrsArr
 }
