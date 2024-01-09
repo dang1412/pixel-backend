@@ -1,4 +1,4 @@
-import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters } from 'adventure_engine/dist/shooting'
+import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters, cleanupDeadChars } from 'adventure_engine/dist/shooting'
 // import { TextDecoder, TextEncoder } from '../encode'
 
 interface MatchState {
@@ -37,7 +37,7 @@ function matchJoinAttempt(
   presence: nkruntime.Presence,
   metadata: {[key: string]: any }
 ) : {state: MatchState, accept: boolean, rejectMessage?: string | undefined } | null {
-  logger.debug('%q attempted to join Lobby match', ctx.userId)
+  logger.debug('%q attempted to join Shooter match', ctx.userId)
 
   return {
       state,
@@ -56,7 +56,7 @@ function matchJoin(
 ) : { state: MatchState } | null {
   presences.forEach((presence) => {
     state.presences[presence.userId] = presence
-    logger.info('%q joined Adventure match', presence.userId)
+    logger.info('%q joined Shooter match', presence.userId)
   })
 
   // get current game state
@@ -79,7 +79,7 @@ function matchLeave(
 ) : { state: MatchState } | null {
   presences.forEach((presence) => {
       delete (state.presences[presence.userId])
-      logger.info('%q left adventure match', presence.userId)
+      logger.info('%q left Shooter match', presence.userId)
   })
 
   return {
@@ -114,6 +114,8 @@ function matchLoop(
     }
   })
 
+  cleanupDeadChars(state.game)
+
   // update match states and get changes
   const [updatedCtrls, movedIds] = proceedControls(state.game, ctrls, 25)
 
@@ -146,7 +148,7 @@ function matchTerminate(
   state: MatchState,
   graceSeconds: number
 ) : { state: MatchState} | null {
-  logger.debug('Lobby match terminated')
+  logger.debug('Shooter match terminated')
 
   const message = `Server shutting down in ${graceSeconds} seconds.`
   dispatcher.broadcastMessage(2, message, null, null)
