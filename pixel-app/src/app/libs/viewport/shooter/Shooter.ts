@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture } from 'pixi.js'
+import { Container, Graphics, Sprite, Texture } from 'pixi.js'
 
 import { AnimatedSprite } from './AnimatedSprite'
 import { characterStates } from './constants'
@@ -11,7 +11,7 @@ export class Shooter {
 
   container = new Container()
   keysPressed: { [key: string]: boolean } = {}
-  speed = 5
+  speed = 4
   // weapon: 'knife' | 'gun' | 'riffle' | 'bat' = 'riffle'
   gender = 'man'
 
@@ -31,6 +31,10 @@ export class Shooter {
   private latestServerY = 0
 
   private selectingCircle = new Sprite()
+
+  private hpDraw = new Graphics()
+
+  private tick = () => {}
 
   constructor(public game: PixelShooter, public id: number, public attrs: CharacterAttrs) {
     this.char = new AnimatedSprite(characterStates)
@@ -60,10 +64,25 @@ export class Shooter {
 
     char.start()
 
-    engine.addTick(() => this.updateByCtrl())
+    this.tick = () => this.updateByCtrl()
+    engine.addTick(this.tick)
 
     container.interactive = true
     container.on('click', () => this.game.select(this.id))
+
+    container.addChild(this.hpDraw)
+    this.drawHp()
+  }
+
+  drawHp() {
+    const pixelSize = this.game.map.scene.options.pixelSize
+    const bar = this.hpDraw
+    bar.clear()
+    bar.beginFill(this.attrs.hp >= 66 ? 'green' : this.attrs.hp > 33 ? 'yellow' : 'red')
+    bar.drawRect(-200, -250, 4 * this.attrs.hp, 15)
+    bar.endFill()
+    bar.lineStyle(2, 'green', 1) // width, color, alpha
+    bar.drawRect(-200, -250, 400, 15)
   }
 
   setLatestServer(x: number, y: number) {
@@ -86,6 +105,17 @@ export class Shooter {
     const angle = Math.atan2(targetY - y1, targetX - x1) + 1.5 * Math.PI
     this.ctrl.angle = Math.round(angle * 100)
     this.char.sprite.rotation = angle
+  }
+
+  dead() {
+    this.game.map.engine.removeTick(this.tick)
+    console.log('Man dead', this.attrs)
+    this.char.stop()
+    this.char.switch('man-dead')
+    this.char.speed = 0.8
+    this.char.start(() => {
+      this.game.map.scene.getMainContainer().removeChild(this.container)
+    })
   }
 
   private updateByCtrl() {

@@ -160,6 +160,17 @@ export const manifest: AssetsManifest = {
       }
     },
     {
+      name: 'man-dead',
+      assets: {
+        'man_dead_0': '/pixel_shooter/death/death_0000_man.png',
+        'man_dead_1': '/pixel_shooter/death/death_0001_man.png',
+        'man_dead_2': '/pixel_shooter/death/death_0002_man.png',
+        'man_dead_3': '/pixel_shooter/death/death_0003_man.png',
+        'man_dead_4': '/pixel_shooter/death/death_0004_man.png',
+        'man_dead_5': '/pixel_shooter/death/death_0005_man.png',
+      }
+    },
+    {
       name: 'sample',
       assets: {
 

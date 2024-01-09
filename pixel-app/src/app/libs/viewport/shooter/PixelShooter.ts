@@ -13,6 +13,10 @@ export class PixelShooter {
   selectingShooterId = 0
 
   private lastCtrl: CharacterControl | undefined
+  // [id, x, y, w, h][]
+  private shooterObjs: [number, number, number, number, number][] = []
+
+  stopGame = () => {}
 
   constructor(public map: PixelMap) {
     map.engine.alwaysRender = true
@@ -53,6 +57,7 @@ export class PixelShooter {
       'man-walk-bat',
       'man-hit-bat',
       'gunhit',
+      'man-dead',
     ])
     Assets.add({alias: 'shooter_select', src: '/pixel_shooter/circle.png'})
     await Assets.load('shooter_select')
@@ -129,7 +134,7 @@ export class PixelShooter {
 
     // request ctrl periodically
     let count = 0
-    setInterval(() => {
+    const intervalID = setInterval(() => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
       if (!shooter) return
       const moved = shooter.ctrl.up || shooter.ctrl.down || shooter.ctrl.left || shooter.ctrl.right
@@ -154,7 +159,11 @@ export class PixelShooter {
       } else {
         count = 0
       }
-    }, 80)
+    }, 100)
+
+    this.stopGame = () => {
+
+    }
   }
 
   addShooter(id: number, attrs?: CharacterAttrs) {
@@ -165,6 +174,8 @@ export class PixelShooter {
 
   // process ctrl signals from server
   updateCtrls(ctrls: CharacterControl[]) {
+    this.shooterObjs = Object.values(this.idCharacterMap).map(char => [char.attrs.id, char.attrs.x - 50, char.attrs.y - 50, 100, 100])
+
     for (let ctrl of ctrls) {
       const char = this.idCharacterMap[ctrl.id]
       if (!char) continue
@@ -188,7 +199,7 @@ export class PixelShooter {
     const char = this.idCharacterMap[id]
     if (!char) return
 
-    const objs: [number, number, number, number][] = Object.values(this.idCharacterMap).map(char => [char.attrs.x - 50, char.attrs.y - 50, 100, 100])
+    const objs = this.shooterObjs
     const angle = char.ctrl.angle / 100 - 1.5 * Math.PI
     const hitP = shootFirstHitObject(char.attrs.x, char.attrs.y, angle, objs)
 
@@ -218,7 +229,16 @@ export class PixelShooter {
         shooter.setLatestServer(attrs.x, attrs.y)
         if (id !== this.selectingShooterId) {
           // update current attrs
-          shooter.attrs = attrs
+          // shooter.attrs = attrs
+          shooter.updateWithLatestServer()
+        }
+
+        shooter.attrs.hp = attrs.hp
+        shooter.drawHp()
+        if (attrs.hp <= 0) {
+          console.log('Shooter dead', attrs.id)
+          shooter.dead()
+          delete this.idCharacterMap[attrs.id]
         }
       }
     }
