@@ -6,9 +6,12 @@ import { PixelService } from '@/libs/services'
 import { useImages } from '@/components/hooks/useImages'
 import { ViewShooter } from '@/components/Views/ViewShooter'
 import { PixelShooter } from '@/libs/viewport/shooter'
+import { useLoading } from '@/components/hooks/useLoading'
 
 export function ViewShooterWrapper() {
   // const { account } = useLogin()
+  const { updateLoading } = useLoading()
+  const gameRef = useRef<PixelShooter>()
 
   const { images, loadImages } = useImages()
 
@@ -16,6 +19,9 @@ export function ViewShooterWrapper() {
     loadImages()
 
     return () => {
+      if (gameRef.current) {
+        gameRef.current.stopGame()
+      }
       (async () => {
         const service = (await PixelService.getInstance()).shooterService
         service.leaveMatch()
@@ -24,7 +30,9 @@ export function ViewShooterWrapper() {
   }, [])
 
   const onInitGame = useCallback(async (game: PixelShooter) => {
+    gameRef.current = game
     const service = (await PixelService.getInstance()).shooterService
+    updateLoading(1)
     await game.load()
 
     // update controls from server
@@ -49,6 +57,8 @@ export function ViewShooterWrapper() {
       console.log('requestAddShooter', x, y)
       service.requestAddShooter(x, y)
     }
+
+    updateLoading(-1)
   }, [])
 
   return (

@@ -65,21 +65,24 @@ export class PixelShooter {
     console.log('Done loading')
 
     // mouse move
-    this.map.engine.on('mousemove', (ex: number, ey: number, px: number, py: number, cx: number, cy: number) => {
+    const onmousemove = (ex: number, ey: number, px: number, py: number, cx: number, cy: number) => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
       if (shooter) {
         shooter.setAngle(cx, cy)
       }
-    })
+    }
 
-    this.map.engine.on('dropman', (px: number, py: number) => {
+    const ondropman = (px: number, py: number) => {
       // request onMatch new shooter
       this.requestAddShooter(px * 100, py * 100)
-    })
+    }
+
+    this.map.engine.on('mousemove', onmousemove)
+    this.map.engine.on('dropman', ondropman)
 
     // key pressed
     let lastFireTime = 0
-    document.addEventListener('keydown', (e) => {
+    const keydown = (e: KeyboardEvent) => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
       if (!shooter) return
       if (e.key === '1') {  // knife
@@ -111,8 +114,9 @@ export class PixelShooter {
       }
       
       console.log('keydown', e.key)
-    })
-    document.addEventListener('keyup', (e) => {
+    }
+
+    const keyup = (e: KeyboardEvent) => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
       if (!shooter) return
       if (e.key === 'a') {
@@ -130,7 +134,9 @@ export class PixelShooter {
       }
 
       console.log('keyup', e.key)
-    })
+    }
+    document.addEventListener('keydown', keydown)
+    document.addEventListener('keyup', keyup)
 
     // request ctrl periodically
     let count = 0
@@ -162,7 +168,13 @@ export class PixelShooter {
     }, 100)
 
     this.stopGame = () => {
+      this.map.engine.removeListener('mousemove', onmousemove)
+      this.map.engine.removeListener('dropman', ondropman)
 
+      document.removeEventListener('keydown', keydown)
+      document.removeEventListener('keyup', keyup)
+
+      clearInterval(intervalID)
     }
   }
 
