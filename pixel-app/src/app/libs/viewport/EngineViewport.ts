@@ -166,6 +166,7 @@ export class EngineViewport {
       const curScale = scene.viewport.scaled
       scene.viewport.resize(w, h)
       scene.viewport.setZoom(curScale * h / curH)
+      this.updateMinimap()
     }
   }
 
@@ -309,8 +310,8 @@ export class EngineViewport {
         this.emit('select', ex, ey, px1, py1, px2, py2)
       } else if (this.dragOrSelectMode === 2) {
         // control mode
-        const [px, py] = scene.getViewportCoord(endX, endY)
-        this.emit('controlling', ex, ey, px, py)
+        // const [px, py] = scene.getViewportCoord(endX, endY)
+        // this.emit('controlling', ex, ey, px, py)
       }
     }
 
@@ -332,7 +333,10 @@ export class EngineViewport {
       ;[startX, startY] = getXY(e)
       const [px, py] = scene.getViewportCoord(startX, startY)
       this.emit('startselect', e.x, e.y, px, py)
-      selecting = true
+      if (this.dragOrSelectMode === 1) {
+        selecting = true
+        console.log('startselect')
+      }
     }
 
     const end = (e: { x: number, y: number }) => {
@@ -341,7 +345,7 @@ export class EngineViewport {
 
       upx = e.x
       upy = e.y
-      if (!selecting) { return }
+      // if (!selecting) { return }
       selecting = false
       
       if (this.dragOrSelectMode === 2) {
