@@ -129,6 +129,85 @@ function decodeAttrsArray(buffer) {
   return attrsArr;
 }
 
+var WORLD_WIDTH = 10000;
+var WORLD_HEIGHT = 10000;
+function angleEqual(angle, i) {
+  return Math.round(angle * 100) === Math.round(i * Math.PI * 100);
+}
+function findBoundaryIntersectPoint(x, y, angle) {
+  if (angleEqual(angle, 0)) {
+    return [WORLD_WIDTH, y];
+  }
+  if (angleEqual(angle, 1) || angleEqual(angle, -1)) {
+    return [0, y];
+  }
+  if (angleEqual(angle, -0.5)) {
+    return [x, 0];
+  }
+  if (angleEqual(angle, 0.5)) {
+    return [x, WORLD_HEIGHT];
+  }
+  var boundaryHorizonY = angle > 0 ? WORLD_HEIGHT : 0;
+  var boundaryHorizonX = (boundaryHorizonY - y) / Math.tan(angle) + x;
+  if (boundaryHorizonX >= 0 && boundaryHorizonX <= WORLD_WIDTH) return [boundaryHorizonX, boundaryHorizonY];
+  var boundaryVerticalX = angle > -Math.PI / 2 && angle < Math.PI / 2 ? WORLD_WIDTH : 0;
+  var boundaryVerticalY = (boundaryVerticalX - x) * Math.tan(angle) + y;
+  return [boundaryVerticalX, boundaryVerticalY];
+}
+function intersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+  var denominator = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+  if (denominator === 0) {
+    return null;
+  }
+  var ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denominator;
+  var ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denominator;
+  if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
+    return null;
+  }
+  var x = x1 + ua * (x2 - x1);
+  var y = y1 + ua * (y2 - y1);
+  return [x, y];
+}
+function shootHitObject(x, y, angle, obj) {
+  var _a = findBoundaryIntersectPoint(x, y, angle),
+    bx = _a[0],
+    by = _a[1];
+  var ox1 = obj[0],
+    oy1 = obj[1],
+    w = obj[2],
+    h = obj[3];
+  var _b = [ox1 + w, oy1 + h],
+    ox2 = _b[0],
+    oy2 = _b[1];
+  if (x >= ox1 && x <= ox2 && y >= oy1 && y <= oy2) return null;
+  var segments = [[ox1, oy1, ox2, oy1], [ox2, oy1, ox2, oy2], [ox2, oy2, ox1, oy2], [ox1, oy2, ox1, oy1]];
+  var hitPoint = null;
+  for (var _i = 0, segments_1 = segments; _i < segments_1.length; _i++) {
+    var seg = segments_1[_i];
+    var intersectP = intersect(x, y, bx, by, seg[0], seg[1], seg[2], seg[3]);
+    if (intersectP) {
+      var distance = Math.abs(intersectP[0] - x) + Math.abs(intersectP[1] - y);
+      if (!hitPoint || hitPoint[2] > distance) {
+        hitPoint = [intersectP[0], intersectP[1], distance];
+      }
+    }
+  }
+  return hitPoint;
+}
+function shootFirstHitObject(x, y, angle, objs) {
+  var firstHit = null;
+  var distance = 0;
+  for (var _i = 0, objs_1 = objs; _i < objs_1.length; _i++) {
+    var obj = objs_1[_i];
+    var hitP = shootHitObject(x, y, angle, obj.slice(1));
+    if (hitP && (!firstHit || distance > hitP[2])) {
+      firstHit = [obj[0], hitP[0], hitP[1]];
+      distance = hitP[2];
+    }
+  }
+  return firstHit;
+}
+
 var defaultCharacterControl = {
   up: false,
   down: false,
@@ -140,58 +219,83 @@ var defaultCharacterControl = {
   id: 0
 };
 
-var characterSpeed = 80;
-function ctrlEqual(c1, c2) {
-  if (!c1 || !c2) return false;
-  return c1.down === c2.down && c1.fire === c2.fire && c1.id === c2.id && c1.left === c2.left && c1.right === c2.right && c1.up === c2.up && c1.weapon === c2.weapon;
+var characterSpeed = 60;
+function cleanupDeadChars(state) {
+  var ids = Object.keys(state.characterAttrsMap);
+  for (var _i = 0, ids_1 = ids; _i < ids_1.length; _i++) {
+    var idstr = ids_1[_i];
+    var id = Number(idstr);
+    var attrs = state.characterAttrsMap[id];
+    if (attrs && attrs.hp <= 0) {
+      delete state.characterAttrsMap[id];
+      delete state.characterCtrlMap[id];
+    }
+  }
 }
-function proceedControls(state, ctrls) {
+function proceedControls(state, ctrls, speed) {
   var idCtrlMap = {};
   for (var _i = 0, ctrls_1 = ctrls; _i < ctrls_1.length; _i++) {
     var ctrl = ctrls_1[_i];
     var id = ctrl.id;
-    if (!idCtrlMap[id] && !ctrlEqual(state.characterCtrlMap[id], ctrl)) {
-      state.characterCtrlMap[id] = ctrl;
-      idCtrlMap[id] = ctrl;
+    if (idCtrlMap[id]) {
+      ctrl.fire = idCtrlMap[id].fire || ctrl.fire;
+    }
+    idCtrlMap[id] = ctrl;
+  }
+  var idSet = new Set();
+  var updatedCtrls = Object.values(idCtrlMap);
+  var charObjs = Object.values(state.characterAttrsMap).map(function (attrs) {
+    return [attrs.id, attrs.x - 50, attrs.y - 50, 100, 100];
+  });
+  for (var _a = 0, updatedCtrls_1 = updatedCtrls; _a < updatedCtrls_1.length; _a++) {
+    var ctrl = updatedCtrls_1[_a];
+    if (ctrl.fire) {
+      var attrs = state.characterAttrsMap[ctrl.id];
+      var angle = ctrl.angle / 100 - 1.5 * Math.PI;
+      var hitP = attrs ? shootFirstHitObject(attrs.x, attrs.y, angle, charObjs) : null;
+      if (hitP) {
+        var targetAttrs = state.characterAttrsMap[hitP[0]];
+        if (targetAttrs) {
+          targetAttrs.hp -= 5;
+          idSet.add(targetAttrs.id);
+          if (targetAttrs.hp <= 0) ;
+        }
+      }
     }
   }
-  return Object.values(idCtrlMap);
+  for (var _b = 0, ctrls_2 = ctrls; _b < ctrls_2.length; _b++) {
+    var ctrl = ctrls_2[_b];
+    var id = ctrl.id;
+    var attrs = state.characterAttrsMap[id];
+    if (attrs) {
+      var moved = proceedAttrsByCtrl(attrs, ctrl, speed);
+      if (moved) idSet.add(id);
+    }
+  }
+  return [updatedCtrls, Array.from(idSet)];
 }
-function proceedGameLoop(state) {
-  var ids = [];
-  for (var _i = 0, _a = Object.keys(state.characterAttrsMap); _i < _a.length; _i++) {
-    var key = _a[_i];
-    var id = Number(key);
-    var moved = proceedGameLoopCharId(state, id);
-    if (moved) ids.push(id);
+function proceedAttrsByCtrl(attrs, ctrl, speed) {
+  if (speed === void 0) {
+    speed = characterSpeed;
   }
-  return ids;
-}
-function proceedGameLoopCharId(state, id) {
-  var attrs = state.characterAttrsMap[id];
-  var ctrl = state.characterCtrlMap[id];
-  if (attrs && ctrl) {
-    var moved = false;
-    if (ctrl.left) {
-      attrs.x -= characterSpeed;
-      moved = true;
-    }
-    if (ctrl.up) {
-      attrs.y -= characterSpeed;
-      moved = true;
-    }
-    if (ctrl.down) {
-      attrs.y += characterSpeed;
-      moved = true;
-    }
-    if (ctrl.right) {
-      attrs.x += characterSpeed;
-      moved = true;
-    }
-    if (ctrl.fire) ;
-    return moved;
+  var moved = false;
+  if (ctrl.left) {
+    attrs.x -= speed;
+    moved = true;
   }
-  return false;
+  if (ctrl.up) {
+    attrs.y -= speed;
+    moved = true;
+  }
+  if (ctrl.down) {
+    attrs.y += speed;
+    moved = true;
+  }
+  if (ctrl.right) {
+    attrs.x += speed;
+    moved = true;
+  }
+  return moved;
 }
 function addShooter(state, x, y) {
   var id = 1;
@@ -216,9 +320,462 @@ function encodeAllShooters(state, ids) {
 function getAttrsArr(state, ids) {
   var attrsArr = ids.map(function (id) {
     return state.characterAttrsMap[id];
+  }).filter(function (attrs) {
+    return attrs;
   });
   return attrsArr;
 }
+
+function matchInit$1(ctx, logger, nk, params) {
+  logger.debug('PixelShooter match created');
+  var presences = {};
+  var game = {
+    characterAttrsMap: {},
+    characterCtrlMap: {}
+  };
+  return {
+    state: {
+      presences: presences,
+      game: game
+    },
+    tickRate: 5,
+    label: 'PixelShooter'
+  };
+}
+function matchJoinAttempt$1(ctx, logger, nk, dispatcher, tick, state, presence, metadata) {
+  logger.debug('%q attempted to join Shooter match', ctx.userId);
+  return {
+    state: state,
+    accept: true
+  };
+}
+function matchJoin$1(ctx, logger, nk, dispatcher, tick, state, presences) {
+  presences.forEach(function (presence) {
+    state.presences[presence.userId] = presence;
+    logger.info('%q joined Shooter match', presence.userId);
+  });
+  var data = encodeAllShooters(state.game);
+  dispatcher.broadcastMessage(0, data, presences);
+  return {
+    state: state
+  };
+}
+function matchLeave$1(ctx, logger, nk, dispatcher, tick, state, presences) {
+  presences.forEach(function (presence) {
+    delete state.presences[presence.userId];
+    logger.info('%q left Shooter match', presence.userId);
+  });
+  return {
+    state: state
+  };
+}
+function matchLoop$1(ctx, logger, nk, dispatcher, tick, state, messages) {
+  var ctrls = [];
+  var newIds = [];
+  messages.forEach(function (m) {
+    if (m.opCode === 0) {
+      var decoded = decodeAttrsArray(m.data)[0];
+      logger.info('Received new shooter %v', decoded);
+      var attrs = addShooter(state.game, decoded.x, decoded.y);
+      newIds.push(attrs.id);
+    } else if (m.opCode === 1) {
+      var ctrl = decodeControls(m.data)[0];
+      logger.info('Received control %v', ctrl);
+      ctrls.push(ctrl);
+    }
+  });
+  cleanupDeadChars(state.game);
+  var _a = proceedControls(state.game, ctrls, 25),
+    updatedCtrls = _a[0],
+    movedIds = _a[1];
+  var updatedIds = __spreadArray(__spreadArray([], movedIds, true), newIds, true);
+  if (updatedCtrls.length) {
+    logger.info('updatedCtrls %v', updatedCtrls);
+    var data = encodeControls(updatedCtrls);
+    dispatcher.broadcastMessage(1, data);
+  }
+  if (updatedIds.length) {
+    logger.info('updatedIds %v', updatedIds);
+    var data = encodeAllShooters(state.game, updatedIds);
+    dispatcher.broadcastMessage(0, data);
+  }
+  return {
+    state: state
+  };
+}
+function matchTerminate$1(ctx, logger, nk, dispatcher, tick, state, graceSeconds) {
+  logger.debug('Shooter match terminated');
+  var message = "Server shutting down in ".concat(graceSeconds, " seconds.");
+  dispatcher.broadcastMessage(2, message, null, null);
+  return {
+    state: state
+  };
+}
+function matchSignal$1(ctx, logger, nk, dispatcher, tick, state, data) {
+  logger.debug('PixelShooter match signal received: ' + data);
+  return {
+    state: state,
+    data: "PixelShooter match signal received: " + data
+  };
+}
+var pixelShooterMatchHandlers = {
+  matchInit: matchInit$1,
+  matchJoinAttempt: matchJoinAttempt$1,
+  matchJoin: matchJoin$1,
+  matchLeave: matchLeave$1,
+  matchLoop: matchLoop$1,
+  matchSignal: matchSignal$1,
+  matchTerminate: matchTerminate$1
+};
+
+var BeastActionType;
+(function (BeastActionType) {
+  BeastActionType[BeastActionType["move"] = 0] = "move";
+  BeastActionType[BeastActionType["shoot"] = 1] = "shoot";
+})(BeastActionType || (BeastActionType = {}));
+var defaultBeastAttrs = {
+  hp: 3,
+  maxHp: 3,
+  moveRange: 4,
+  shootRange: 4,
+  w: 1,
+  h: 1
+};
+
+function getPixelIndex(x, y, w) {
+  return y * w + x;
+}
+function getPixelXYFromIndex(index, w) {
+  var x = index % w;
+  var y = (index - x) / w;
+  return [x, y];
+}
+
+function getPixelsFromArea(area, mapWidth) {
+  var indexes = [];
+  for (var j = 0; j < area.h; j++) {
+    var index = getPixelIndex(area.x, area.y + j, mapWidth);
+    for (var i = 0; i < area.w; i++) {
+      indexes.push(index + i);
+    }
+  }
+  return indexes;
+}
+
+var AdventureEngine = function () {
+  function AdventureEngine() {}
+  AdventureEngine.initState = function () {
+    var state = {
+      beastAttrsMap: {},
+      beastTypeAttrsMap: {},
+      beastPixelMap: {},
+      pixelBeastMap: {},
+      beastOnMap: [],
+      weaponAttrsMap: {},
+      pixelItemMap: {},
+      pixelWeaponsMap: {},
+      beastEquipWeaponsMap: {},
+      beastEquipItemMap: {}
+    };
+    state.weaponAttrsMap[1] = {
+      damage: 1,
+      damageArea: {
+        x: -1,
+        y: 0,
+        w: 3,
+        h: 3
+      }
+    };
+    state.weaponAttrsMap[2] = {
+      damage: 1,
+      damageArea: {
+        x: -1,
+        y: -1,
+        w: 3,
+        h: 3
+      }
+    };
+    state.beastTypeAttrsMap = {
+      7: {
+        maxHp: 10
+      },
+      8: {
+        w: 3,
+        h: 3,
+        maxHp: 10
+      }
+    };
+    return state;
+  };
+  AdventureEngine.getAllBeastPositions = function (state) {
+    var positions = Object.keys(state.beastPixelMap).map(function (id) {
+      return Number(id);
+    }).map(function (id) {
+      return {
+        beastId: id,
+        pixel: state.beastPixelMap[id]
+      };
+    });
+    return positions;
+  };
+  AdventureEngine.getAllBeastProps = function (state) {
+    var beastIds = Object.keys(state.beastAttrsMap).map(function (id) {
+      return Number(id);
+    });
+    var hps = beastIds.map(function (id) {
+      return state.beastAttrsMap[id].hp || 3;
+    });
+    var items = beastIds.map(function (id) {
+      return state.beastEquipItemMap[id] || 0;
+    });
+    return [beastIds, hps, items];
+  };
+  AdventureEngine.getAllPixelItems = function (state) {
+    var pixels = Object.keys(state.pixelItemMap).map(function (id) {
+      return Number(id);
+    });
+    var items = pixels.map(function (pixel) {
+      return state.pixelItemMap[pixel] || 0;
+    });
+    return [pixels, items];
+  };
+  AdventureEngine.onboardBeast = function (state, beastId, pixel, weapons, attrs) {
+    var type = Math.floor(beastId / 1000000);
+    var beastAttrs = Object.assign({}, defaultBeastAttrs, state.beastTypeAttrsMap[type] || {}, attrs || {});
+    state.beastAttrsMap[beastId] = beastAttrs;
+    var moved = AdventureEngine.executeMove(state, {
+      beastId: beastId,
+      pixel: pixel
+    });
+    if (moved) state.beastEquipWeaponsMap[beastId] = weapons;
+    return moved;
+  };
+  AdventureEngine.dropItemOnMap = function (state, itemId, pixel) {
+    var currentItem = state.pixelItemMap[pixel];
+    if (currentItem >= 0) {
+      return false;
+    }
+    state.pixelItemMap[pixel] = itemId;
+    return true;
+  };
+  AdventureEngine.proceedDropItem = function (state, dropItems, updates) {
+    for (var _i = 0, dropItems_1 = dropItems; _i < dropItems_1.length; _i++) {
+      var action = dropItems_1[_i];
+      var itemId = action.beastId,
+        pixel = action.pixel;
+      var isDropped = AdventureEngine.dropItemOnMap(state, itemId, pixel);
+      if (isDropped) {
+        updates.changedPixels.push(pixel);
+        updates.changedPixelItems.push(itemId);
+      }
+    }
+  };
+  AdventureEngine.proceedActions = function (state, moves, shoots, dropEquipBeasts) {
+    var updates = {
+      moves: [],
+      shoots: [],
+      changedBeasts: [],
+      changedBeastHps: [],
+      changedBeastEquips: [],
+      changedPixels: [],
+      changedPixelItems: []
+    };
+    var changedBeastSet = new Set();
+    var changedPixelSet = new Set();
+    for (var _i = 0, dropEquipBeasts_1 = dropEquipBeasts; _i < dropEquipBeasts_1.length; _i++) {
+      var beastId = dropEquipBeasts_1[_i];
+      var item = state.beastEquipItemMap[beastId];
+      if (!item) continue;
+      var pixel = state.beastPixelMap[beastId];
+      if (pixel === undefined) continue;
+      var isDropped = AdventureEngine.dropItemOnMap(state, item, pixel);
+      if (isDropped) {
+        delete state.beastEquipItemMap[beastId];
+        changedBeastSet.add(beastId);
+        changedPixelSet.add(pixel);
+      }
+    }
+    for (var _a = 0, moves_1 = moves; _a < moves_1.length; _a++) {
+      var move = moves_1[_a];
+      var beastId = move.beastId,
+        pixel = move.pixel;
+      var curpos = state.beastPixelMap[beastId];
+      if (curpos >= 0) {
+        var moved = AdventureEngine.executeMove(state, move);
+        if (moved) updates.moves.push(move);
+      }
+    }
+    for (var _b = 0, shoots_1 = shoots; _b < shoots_1.length; _b++) {
+      var shoot = shoots_1[_b];
+      var beastId = shoot.beastId,
+        pixel = shoot.pixel;
+      var curpos = state.beastPixelMap[beastId];
+      if (curpos >= 0) {
+        AdventureEngine.executeShoot(state, shoot, changedBeastSet);
+        updates.shoots.push(shoot);
+      }
+    }
+    for (var _c = 0, _d = updates.moves; _c < _d.length; _c++) {
+      var move = _d[_c];
+      var beastId = AdventureEngine.tryEquips(state, move.pixel);
+      if (beastId >= 0) {
+        changedBeastSet.add(beastId);
+        changedPixelSet.add(move.pixel);
+      }
+    }
+    updates.changedBeasts = Array.from(changedBeastSet);
+    updates.changedBeastHps = updates.changedBeasts.map(function (beastId) {
+      return state.beastAttrsMap[beastId].hp;
+    });
+    updates.changedBeastEquips = updates.changedBeasts.map(function (beastId) {
+      return state.beastEquipItemMap[beastId] || 0;
+    });
+    updates.changedPixels = Array.from(changedPixelSet);
+    updates.changedPixelItems = updates.changedPixels.map(function (pixel) {
+      return state.pixelItemMap[pixel] || 0;
+    });
+    return updates;
+  };
+  AdventureEngine.tryEquips = function (state, pixel) {
+    var beastId = state.pixelBeastMap[pixel];
+    if (beastId === undefined) {
+      return -1;
+    }
+    var item = state.pixelItemMap[pixel];
+    if (item === undefined) {
+      return -1;
+    }
+    var equippedItem = state.beastEquipItemMap[beastId];
+    if (equippedItem >= 0) {
+      return -1;
+    }
+    delete state.pixelItemMap[pixel];
+    state.beastEquipItemMap[beastId] = item;
+    return beastId;
+  };
+  AdventureEngine.executeMove = function (state, _a) {
+    var beastId = _a.beastId,
+      pixel = _a.pixel;
+    var attr = state.beastAttrsMap[beastId];
+    var _b = getPixelXYFromIndex(pixel, 100),
+      x = _b[0],
+      y = _b[1];
+    var pixels = getPixelsFromArea({
+      x: x,
+      y: y,
+      w: attr.w,
+      h: attr.h
+    }, 100);
+    for (var _i = 0, pixels_1 = pixels; _i < pixels_1.length; _i++) {
+      var p = pixels_1[_i];
+      if (state.pixelBeastMap[p] && state.pixelBeastMap[p] !== beastId) {
+        return false;
+      }
+    }
+    var from = state.beastPixelMap[beastId];
+    if (from >= 0) {
+      var _c = getPixelXYFromIndex(from, 100),
+        fx = _c[0],
+        fy = _c[1];
+      var fromPixels = getPixelsFromArea({
+        x: fx,
+        y: fy,
+        w: attr.w,
+        h: attr.h
+      }, 100);
+      for (var _d = 0, fromPixels_1 = fromPixels; _d < fromPixels_1.length; _d++) {
+        var fp = fromPixels_1[_d];
+        delete state.pixelBeastMap[fp];
+      }
+    }
+    state.beastPixelMap[beastId] = pixels[0];
+    for (var _e = 0, pixels_2 = pixels; _e < pixels_2.length; _e++) {
+      var p = pixels_2[_e];
+      state.pixelBeastMap[p] = beastId;
+    }
+    return true;
+  };
+  AdventureEngine.executeShoot = function (state, shoot, changedBeasts) {
+    shoot.beastId;
+      var pixel = shoot.pixel,
+      type = shoot.type;
+    var _a = state.weaponAttrsMap[type] || {
+        damage: 1,
+        damageArea: {
+          x: 0,
+          y: 0,
+          w: 1,
+          h: 1
+        }
+      },
+      damage = _a.damage,
+      damageArea = _a.damageArea;
+    var _b = getPixelXYFromIndex(pixel, 100),
+      tarx = _b[0],
+      tary = _b[1];
+    var _c = [tarx + damageArea.x, tary + damageArea.y, damageArea.w, damageArea.h],
+      x = _c[0],
+      y = _c[1],
+      w = _c[2],
+      h = _c[3];
+    var damagedPixels = getPixelsFromArea({
+      x: x,
+      y: y,
+      w: w,
+      h: h
+    }, 100);
+    for (var _i = 0, damagedPixels_1 = damagedPixels; _i < damagedPixels_1.length; _i++) {
+      var target = damagedPixels_1[_i];
+      var update = AdventureEngine.receiveDamage(state, target, damage);
+      if (update) {
+        var beastId_1 = update[0],
+          attrs = update[1];
+        state.beastAttrsMap[beastId_1] = attrs;
+        changedBeasts.add(beastId_1);
+      }
+    }
+  };
+  AdventureEngine.receiveDamage = function (state, pixel, damage) {
+    var beastId = state.pixelBeastMap[pixel];
+    if (beastId === undefined) {
+      return undefined;
+    }
+    var attrs = state.beastAttrsMap[beastId];
+    if (attrs === undefined) {
+      return undefined;
+    }
+    if (attrs.hp === 0) {
+      return undefined;
+    }
+    var hp = Math.max(attrs.hp - damage, 0);
+    if (hp === 0) {
+      AdventureEngine.beastDie(state, beastId);
+    }
+    return [beastId, {
+      hp: hp
+    }];
+  };
+  AdventureEngine.beastDie = function (state, beastId) {
+    var attrs = state.beastAttrsMap[beastId];
+    var pixel = state.beastPixelMap[beastId];
+    var _a = getPixelXYFromIndex(pixel, 100),
+      x = _a[0],
+      y = _a[1];
+    var pixels = getPixelsFromArea({
+      x: x,
+      y: y,
+      w: attrs.w,
+      h: attrs.h
+    }, 100);
+    for (var _i = 0, pixels_3 = pixels; _i < pixels_3.length; _i++) {
+      var p = pixels_3[_i];
+      delete state.pixelBeastMap[p];
+    }
+    delete state.beastPixelMap[beastId];
+    delete state.beastAttrsMap[beastId];
+  };
+  return AdventureEngine;
+}();
 
 var SIZEOF_SHORT = 2;
 var SIZEOF_INT = 4;
@@ -1154,454 +1711,6 @@ var Builder = /*#__PURE__*/function () {
     }
   }]);
   return Builder;
-}();
-
-function matchInit$1(ctx, logger, nk, params) {
-  logger.debug('PixelShooter match created');
-  var presences = {};
-  var game = {
-    characterAttrsMap: {},
-    characterCtrlMap: {}
-  };
-  return {
-    state: {
-      presences: presences,
-      game: game
-    },
-    tickRate: 5,
-    label: 'PixelShooter'
-  };
-}
-function matchJoinAttempt$1(ctx, logger, nk, dispatcher, tick, state, presence, metadata) {
-  logger.debug('%q attempted to join Lobby match', ctx.userId);
-  return {
-    state: state,
-    accept: true
-  };
-}
-function matchJoin$1(ctx, logger, nk, dispatcher, tick, state, presences) {
-  presences.forEach(function (presence) {
-    state.presences[presence.userId] = presence;
-    logger.info('%q joined Adventure match', presence.userId);
-  });
-  var data = encodeAllShooters(state.game);
-  dispatcher.broadcastMessage(0, data, presences);
-  return {
-    state: state
-  };
-}
-function matchLeave$1(ctx, logger, nk, dispatcher, tick, state, presences) {
-  presences.forEach(function (presence) {
-    delete state.presences[presence.userId];
-    logger.info('%q left adventure match', presence.userId);
-  });
-  return {
-    state: state
-  };
-}
-function matchLoop$1(ctx, logger, nk, dispatcher, tick, state, messages) {
-  var ctrls = [];
-  var newIds = [];
-  messages.forEach(function (m) {
-    if (m.opCode === 0) {
-      var decoded = decodeAttrsArray(m.data)[0];
-      logger.info('Received new shooter %v', decoded);
-      var attrs = addShooter(state.game, decoded.x, decoded.y);
-      newIds.push(attrs.id);
-    } else if (m.opCode === 1) {
-      var ctrl = decodeControls(m.data)[0];
-      logger.info('Received control %v', ctrl);
-      ctrls.push(ctrl);
-    }
-  });
-  var updatedCtrls = proceedControls(state.game, ctrls);
-  var movedIds = proceedGameLoop(state.game);
-  var updatedIds = __spreadArray(__spreadArray([], movedIds, true), newIds, true);
-  if (updatedCtrls.length) {
-    var data = encodeControls(updatedCtrls);
-    dispatcher.broadcastMessage(1, data);
-  }
-  if (updatedIds.length) {
-    logger.info('updatedIds %v', updatedIds);
-    var data = encodeAllShooters(state.game, updatedIds);
-    if (data.byteLength > 1) dispatcher.broadcastMessage(0, data);
-  }
-  return {
-    state: state
-  };
-}
-function matchTerminate$1(ctx, logger, nk, dispatcher, tick, state, graceSeconds) {
-  logger.debug('Lobby match terminated');
-  var message = "Server shutting down in ".concat(graceSeconds, " seconds.");
-  dispatcher.broadcastMessage(2, message, null, null);
-  return {
-    state: state
-  };
-}
-function matchSignal$1(ctx, logger, nk, dispatcher, tick, state, data) {
-  logger.debug('PixelShooter match signal received: ' + data);
-  return {
-    state: state,
-    data: "PixelShooter match signal received: " + data
-  };
-}
-var pixelShooterMatchHandlers = {
-  matchInit: matchInit$1,
-  matchJoinAttempt: matchJoinAttempt$1,
-  matchJoin: matchJoin$1,
-  matchLeave: matchLeave$1,
-  matchLoop: matchLoop$1,
-  matchSignal: matchSignal$1,
-  matchTerminate: matchTerminate$1
-};
-
-var BeastActionType;
-(function (BeastActionType) {
-  BeastActionType[BeastActionType["move"] = 0] = "move";
-  BeastActionType[BeastActionType["shoot"] = 1] = "shoot";
-})(BeastActionType || (BeastActionType = {}));
-var defaultBeastAttrs = {
-  hp: 3,
-  maxHp: 3,
-  moveRange: 4,
-  shootRange: 4,
-  w: 1,
-  h: 1
-};
-
-function getPixelIndex(x, y, w) {
-  return y * w + x;
-}
-function getPixelXYFromIndex(index, w) {
-  var x = index % w;
-  var y = (index - x) / w;
-  return [x, y];
-}
-
-function getPixelsFromArea(area, mapWidth) {
-  var indexes = [];
-  for (var j = 0; j < area.h; j++) {
-    var index = getPixelIndex(area.x, area.y + j, mapWidth);
-    for (var i = 0; i < area.w; i++) {
-      indexes.push(index + i);
-    }
-  }
-  return indexes;
-}
-
-var AdventureEngine = function () {
-  function AdventureEngine() {}
-  AdventureEngine.initState = function () {
-    var state = {
-      beastAttrsMap: {},
-      beastTypeAttrsMap: {},
-      beastPixelMap: {},
-      pixelBeastMap: {},
-      beastOnMap: [],
-      weaponAttrsMap: {},
-      pixelItemMap: {},
-      pixelWeaponsMap: {},
-      beastEquipWeaponsMap: {},
-      beastEquipItemMap: {}
-    };
-    state.weaponAttrsMap[1] = {
-      damage: 1,
-      damageArea: {
-        x: -1,
-        y: 0,
-        w: 3,
-        h: 3
-      }
-    };
-    state.weaponAttrsMap[2] = {
-      damage: 1,
-      damageArea: {
-        x: -1,
-        y: -1,
-        w: 3,
-        h: 3
-      }
-    };
-    state.beastTypeAttrsMap = {
-      7: {
-        maxHp: 10
-      },
-      8: {
-        w: 3,
-        h: 3,
-        maxHp: 10
-      }
-    };
-    return state;
-  };
-  AdventureEngine.getAllBeastPositions = function (state) {
-    var positions = Object.keys(state.beastPixelMap).map(function (id) {
-      return Number(id);
-    }).map(function (id) {
-      return {
-        beastId: id,
-        pixel: state.beastPixelMap[id]
-      };
-    });
-    return positions;
-  };
-  AdventureEngine.getAllBeastProps = function (state) {
-    var beastIds = Object.keys(state.beastAttrsMap).map(function (id) {
-      return Number(id);
-    });
-    var hps = beastIds.map(function (id) {
-      return state.beastAttrsMap[id].hp || 3;
-    });
-    var items = beastIds.map(function (id) {
-      return state.beastEquipItemMap[id] || 0;
-    });
-    return [beastIds, hps, items];
-  };
-  AdventureEngine.getAllPixelItems = function (state) {
-    var pixels = Object.keys(state.pixelItemMap).map(function (id) {
-      return Number(id);
-    });
-    var items = pixels.map(function (pixel) {
-      return state.pixelItemMap[pixel] || 0;
-    });
-    return [pixels, items];
-  };
-  AdventureEngine.onboardBeast = function (state, beastId, pixel, weapons, attrs) {
-    var type = Math.floor(beastId / 1000000);
-    var beastAttrs = Object.assign({}, defaultBeastAttrs, state.beastTypeAttrsMap[type] || {}, attrs || {});
-    state.beastAttrsMap[beastId] = beastAttrs;
-    var moved = AdventureEngine.executeMove(state, {
-      beastId: beastId,
-      pixel: pixel
-    });
-    if (moved) state.beastEquipWeaponsMap[beastId] = weapons;
-    return moved;
-  };
-  AdventureEngine.dropItemOnMap = function (state, itemId, pixel) {
-    var currentItem = state.pixelItemMap[pixel];
-    if (currentItem >= 0) {
-      return false;
-    }
-    state.pixelItemMap[pixel] = itemId;
-    return true;
-  };
-  AdventureEngine.proceedDropItem = function (state, dropItems, updates) {
-    for (var _i = 0, dropItems_1 = dropItems; _i < dropItems_1.length; _i++) {
-      var action = dropItems_1[_i];
-      var itemId = action.beastId,
-        pixel = action.pixel;
-      var isDropped = AdventureEngine.dropItemOnMap(state, itemId, pixel);
-      if (isDropped) {
-        updates.changedPixels.push(pixel);
-        updates.changedPixelItems.push(itemId);
-      }
-    }
-  };
-  AdventureEngine.proceedActions = function (state, moves, shoots, dropEquipBeasts) {
-    var updates = {
-      moves: [],
-      shoots: [],
-      changedBeasts: [],
-      changedBeastHps: [],
-      changedBeastEquips: [],
-      changedPixels: [],
-      changedPixelItems: []
-    };
-    var changedBeastSet = new Set();
-    var changedPixelSet = new Set();
-    for (var _i = 0, dropEquipBeasts_1 = dropEquipBeasts; _i < dropEquipBeasts_1.length; _i++) {
-      var beastId = dropEquipBeasts_1[_i];
-      var item = state.beastEquipItemMap[beastId];
-      if (!item) continue;
-      var pixel = state.beastPixelMap[beastId];
-      if (pixel === undefined) continue;
-      var isDropped = AdventureEngine.dropItemOnMap(state, item, pixel);
-      if (isDropped) {
-        delete state.beastEquipItemMap[beastId];
-        changedBeastSet.add(beastId);
-        changedPixelSet.add(pixel);
-      }
-    }
-    for (var _a = 0, moves_1 = moves; _a < moves_1.length; _a++) {
-      var move = moves_1[_a];
-      var beastId = move.beastId,
-        pixel = move.pixel;
-      var curpos = state.beastPixelMap[beastId];
-      if (curpos >= 0) {
-        var moved = AdventureEngine.executeMove(state, move);
-        if (moved) updates.moves.push(move);
-      }
-    }
-    for (var _b = 0, shoots_1 = shoots; _b < shoots_1.length; _b++) {
-      var shoot = shoots_1[_b];
-      var beastId = shoot.beastId,
-        pixel = shoot.pixel;
-      var curpos = state.beastPixelMap[beastId];
-      if (curpos >= 0) {
-        AdventureEngine.executeShoot(state, shoot, changedBeastSet);
-        updates.shoots.push(shoot);
-      }
-    }
-    for (var _c = 0, _d = updates.moves; _c < _d.length; _c++) {
-      var move = _d[_c];
-      var beastId = AdventureEngine.tryEquips(state, move.pixel);
-      if (beastId >= 0) {
-        changedBeastSet.add(beastId);
-        changedPixelSet.add(move.pixel);
-      }
-    }
-    updates.changedBeasts = Array.from(changedBeastSet);
-    updates.changedBeastHps = updates.changedBeasts.map(function (beastId) {
-      return state.beastAttrsMap[beastId].hp;
-    });
-    updates.changedBeastEquips = updates.changedBeasts.map(function (beastId) {
-      return state.beastEquipItemMap[beastId] || 0;
-    });
-    updates.changedPixels = Array.from(changedPixelSet);
-    updates.changedPixelItems = updates.changedPixels.map(function (pixel) {
-      return state.pixelItemMap[pixel] || 0;
-    });
-    return updates;
-  };
-  AdventureEngine.tryEquips = function (state, pixel) {
-    var beastId = state.pixelBeastMap[pixel];
-    if (beastId === undefined) {
-      return -1;
-    }
-    var item = state.pixelItemMap[pixel];
-    if (item === undefined) {
-      return -1;
-    }
-    var equippedItem = state.beastEquipItemMap[beastId];
-    if (equippedItem >= 0) {
-      return -1;
-    }
-    delete state.pixelItemMap[pixel];
-    state.beastEquipItemMap[beastId] = item;
-    return beastId;
-  };
-  AdventureEngine.executeMove = function (state, _a) {
-    var beastId = _a.beastId,
-      pixel = _a.pixel;
-    var attr = state.beastAttrsMap[beastId];
-    var _b = getPixelXYFromIndex(pixel, 100),
-      x = _b[0],
-      y = _b[1];
-    var pixels = getPixelsFromArea({
-      x: x,
-      y: y,
-      w: attr.w,
-      h: attr.h
-    }, 100);
-    for (var _i = 0, pixels_1 = pixels; _i < pixels_1.length; _i++) {
-      var p = pixels_1[_i];
-      if (state.pixelBeastMap[p] && state.pixelBeastMap[p] !== beastId) {
-        return false;
-      }
-    }
-    var from = state.beastPixelMap[beastId];
-    if (from >= 0) {
-      var _c = getPixelXYFromIndex(from, 100),
-        fx = _c[0],
-        fy = _c[1];
-      var fromPixels = getPixelsFromArea({
-        x: fx,
-        y: fy,
-        w: attr.w,
-        h: attr.h
-      }, 100);
-      for (var _d = 0, fromPixels_1 = fromPixels; _d < fromPixels_1.length; _d++) {
-        var fp = fromPixels_1[_d];
-        delete state.pixelBeastMap[fp];
-      }
-    }
-    state.beastPixelMap[beastId] = pixels[0];
-    for (var _e = 0, pixels_2 = pixels; _e < pixels_2.length; _e++) {
-      var p = pixels_2[_e];
-      state.pixelBeastMap[p] = beastId;
-    }
-    return true;
-  };
-  AdventureEngine.executeShoot = function (state, shoot, changedBeasts) {
-    shoot.beastId;
-      var pixel = shoot.pixel,
-      type = shoot.type;
-    var _a = state.weaponAttrsMap[type] || {
-        damage: 1,
-        damageArea: {
-          x: 0,
-          y: 0,
-          w: 1,
-          h: 1
-        }
-      },
-      damage = _a.damage,
-      damageArea = _a.damageArea;
-    var _b = getPixelXYFromIndex(pixel, 100),
-      tarx = _b[0],
-      tary = _b[1];
-    var _c = [tarx + damageArea.x, tary + damageArea.y, damageArea.w, damageArea.h],
-      x = _c[0],
-      y = _c[1],
-      w = _c[2],
-      h = _c[3];
-    var damagedPixels = getPixelsFromArea({
-      x: x,
-      y: y,
-      w: w,
-      h: h
-    }, 100);
-    for (var _i = 0, damagedPixels_1 = damagedPixels; _i < damagedPixels_1.length; _i++) {
-      var target = damagedPixels_1[_i];
-      var update = AdventureEngine.receiveDamage(state, target, damage);
-      if (update) {
-        var beastId_1 = update[0],
-          attrs = update[1];
-        state.beastAttrsMap[beastId_1] = attrs;
-        changedBeasts.add(beastId_1);
-      }
-    }
-  };
-  AdventureEngine.receiveDamage = function (state, pixel, damage) {
-    var beastId = state.pixelBeastMap[pixel];
-    if (beastId === undefined) {
-      return undefined;
-    }
-    var attrs = state.beastAttrsMap[beastId];
-    if (attrs === undefined) {
-      return undefined;
-    }
-    if (attrs.hp === 0) {
-      return undefined;
-    }
-    var hp = Math.max(attrs.hp - damage, 0);
-    if (hp === 0) {
-      AdventureEngine.beastDie(state, beastId);
-    }
-    return [beastId, {
-      hp: hp
-    }];
-  };
-  AdventureEngine.beastDie = function (state, beastId) {
-    var attrs = state.beastAttrsMap[beastId];
-    var pixel = state.beastPixelMap[beastId];
-    var _a = getPixelXYFromIndex(pixel, 100),
-      x = _a[0],
-      y = _a[1];
-    var pixels = getPixelsFromArea({
-      x: x,
-      y: y,
-      w: attrs.w,
-      h: attrs.h
-    }, 100);
-    for (var _i = 0, pixels_3 = pixels; _i < pixels_3.length; _i++) {
-      var p = pixels_3[_i];
-      delete state.pixelBeastMap[p];
-    }
-    delete state.beastPixelMap[beastId];
-    delete state.beastAttrsMap[beastId];
-  };
-  return AdventureEngine;
 }();
 
 var BeastAction = function () {

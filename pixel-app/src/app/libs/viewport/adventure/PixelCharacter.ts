@@ -119,7 +119,7 @@ export class PixelCharacter {
         scene.clearSelect()
       }
     }
-    engine.on('controlling', controlling)
+    engine.on('mousemove', controlling)
 
     engine.once('controlend', (px: number, py: number) => {
       // back to drag mode
@@ -127,7 +127,7 @@ export class PixelCharacter {
       this.selecting = false
       this.rangeDraw.visible = false
 
-      engine.removeListener('controlling', controlling)
+      engine.removeListener('mousemove', controlling)
 
       // check in range
       if (this.isInRange(px, py)) {

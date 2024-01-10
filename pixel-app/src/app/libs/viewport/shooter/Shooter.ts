@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture } from 'pixi.js'
+import { Container, Graphics, Sprite, Texture } from 'pixi.js'
 
 import { AnimatedSprite } from './AnimatedSprite'
 import { characterStates } from './constants'
@@ -11,18 +11,30 @@ export class Shooter {
 
   container = new Container()
   keysPressed: { [key: string]: boolean } = {}
-  speed = 6
+  speed = 4
   // weapon: 'knife' | 'gun' | 'riffle' | 'bat' = 'riffle'
   gender = 'man'
 
   char: AnimatedSprite
 
+  // only use angle, weapon to draw
   ctrl: CharacterControl
 
   private curX = 0
   private curY = 0
 
+  // latest server updated position for controlling character,
+  // update attrs x, y with these values when not controlling
+  // for other not controlling characters,
+  // update attrs x, y with server values immediately, hence not use these
+  private latestServerX = 0
+  private latestServerY = 0
+
   private selectingCircle = new Sprite()
+
+  private hpDraw = new Graphics()
+
+  private tick = () => {}
 
   constructor(public game: PixelShooter, public id: number, public attrs: CharacterAttrs) {
     this.char = new AnimatedSprite(characterStates)
@@ -50,14 +62,37 @@ export class Shooter {
     this.curY = this.attrs.y
     scene.setImagePosition(container, this.attrs.x / 100, this.attrs.y / 100, 1.2, 1.2)
 
+    char.start()
 
-    char.sprite.anchor.set(0.5, 0.5)
-    char.play()
-
-    engine.addTick(() => this.updateByCtrl())
+    this.tick = () => this.updateByCtrl()
+    engine.addTick(this.tick)
 
     container.interactive = true
     container.on('click', () => this.game.select(this.id))
+
+    container.addChild(this.hpDraw)
+    this.drawHp()
+  }
+
+  drawHp() {
+    const pixelSize = this.game.map.scene.options.pixelSize
+    const bar = this.hpDraw
+    bar.clear()
+    bar.beginFill(this.attrs.hp >= 66 ? 'green' : this.attrs.hp > 33 ? 'yellow' : 'red')
+    bar.drawRect(-200, -250, 4 * this.attrs.hp, 15)
+    bar.endFill()
+    bar.lineStyle(2, 'green', 1) // width, color, alpha
+    bar.drawRect(-200, -250, 400, 15)
+  }
+
+  setLatestServer(x: number, y: number) {
+    this.latestServerX = x
+    this.latestServerY = y
+  }
+
+  updateWithLatestServer() {
+    this.attrs.x = this.latestServerX
+    this.attrs.y = this.latestServerY
   }
 
   showSelect(visible: boolean) {
@@ -72,8 +107,19 @@ export class Shooter {
     this.char.sprite.rotation = angle
   }
 
+  dead() {
+    this.game.map.engine.removeTick(this.tick)
+    console.log('Man dead', this.attrs)
+    this.char.stop()
+    this.char.switch('man-dead')
+    this.char.speed = 0.8
+    this.char.start(() => {
+      this.game.map.scene.getMainContainer().removeChild(this.container)
+    })
+  }
+
   private updateByCtrl() {
-    let moving = this.ctrl.left || this.ctrl.right || this.ctrl.up || this.ctrl.down
+    // let moving = this.ctrl.left || this.ctrl.right || this.ctrl.up || this.ctrl.down
     // if (this.curX === this.attrs.x && this.curY === this.attrs.y) {
     //   if (this.ctrl.left) {
     //     this.attrs.x -= this.speed
@@ -88,11 +134,13 @@ export class Shooter {
     //     this.attrs.x += this.speed
     //   }
     // } else {
-      this.updatePos()
+    const moving = !(this.curX === this.attrs.x && this.curY === this.attrs.y)
+    this.updatePos()
     // }
 
     if (this.ctrl.fire) {
       this.char.switchOnce(`man-hit-${weapons[this.ctrl.weapon]}`, 0.04)
+      if (!this.selectingCircle.visible) this.ctrl.fire = false
     } else if (moving) {
       this.char.switch(`man-walk-${weapons[this.ctrl.weapon]}`)
     } else {
