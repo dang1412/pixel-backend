@@ -1,7 +1,8 @@
+import { shootFirstHitObject } from './calculateShoot'
 import { encodeAttrsArray } from './encodeFuncs'
 import { CharacterAttrs, CharacterControl, ShootingGameState, defaultCharacterAttrs, defaultCharacterControl } from './types'
 
-const characterSpeed = 80
+const characterSpeed = 60
 
 export function ctrlEqual(c1: CharacterControl, c2: CharacterControl): boolean {
   if (!c1 || !c2) return false
@@ -16,20 +17,67 @@ export function ctrlEqual(c1: CharacterControl, c2: CharacterControl): boolean {
     && c1.weapon === c2.weapon
 }
 
-export function proceedControls(state: ShootingGameState, ctrls: CharacterControl[]): CharacterControl[] {
-  const idCtrlMap: {[id: number]: CharacterControl} = {}
+export function cleanupDeadChars(state: ShootingGameState) {
+  const ids = Object.keys(state.characterAttrsMap)
+  for (const idstr of ids) {
+    const id = Number(idstr)
+    const attrs = state.characterAttrsMap[id]
+    if (attrs && attrs.hp <= 0) {
+      delete state.characterAttrsMap[id]
+      delete state.characterCtrlMap[id]
+    }
+  }
+}
 
+export function proceedControls(state: ShootingGameState, ctrls: CharacterControl[], speed?: number): [CharacterControl[], number[]] {
+  const idCtrlMap: {[id: number]: CharacterControl} = {}
+  
+  // aggregate ctrls to execute fires, maximum 1 fire per character
   for (const ctrl of ctrls) {
     const id = ctrl.id
-    // prioritize prev control if more than 1 control from same character
-    if (!idCtrlMap[id] && !ctrlEqual(state.characterCtrlMap[id], ctrl)) {
-      // update ctrl
-      state.characterCtrlMap[id] = ctrl
-      idCtrlMap[id] = ctrl
+
+    if (idCtrlMap[id]) {
+      ctrl.fire = idCtrlMap[id].fire || ctrl.fire
+    }
+    idCtrlMap[id] = ctrl
+  }
+
+  const idSet = new Set<number>()
+
+  // execute fires
+  const updatedCtrls = Object.values(idCtrlMap)
+  const charObjs: [number, number, number, number, number][] = Object.values(state.characterAttrsMap).map(attrs => [attrs.id, attrs.x - 50, attrs.y - 50, 100, 100])
+  for (const ctrl of updatedCtrls) {
+    if (ctrl.fire) {
+      const attrs = state.characterAttrsMap[ctrl.id]
+      const angle = ctrl.angle / 100 - 1.5 * Math.PI
+      const hitP = attrs ? shootFirstHitObject(attrs.x, attrs.y, angle, charObjs) : null
+      if (hitP) {
+        const targetAttrs = state.characterAttrsMap[hitP[0]]
+        if (targetAttrs) {
+          targetAttrs.hp -= 5
+          idSet.add(targetAttrs.id)
+          if (targetAttrs.hp <= 0) {
+            // character die
+            // delete state.characterAttrsMap[targetAttrs.id]
+          }
+        }
+      }
     }
   }
 
-  return Object.values(idCtrlMap)
+  // execute move
+  
+  for (const ctrl of ctrls) {
+    const id = ctrl.id
+    const attrs = state.characterAttrsMap[id]
+    if (attrs) {
+      const moved = proceedAttrsByCtrl(attrs, ctrl, speed)
+      if (moved) idSet.add(id)
+    }
+  }
+
+  return [updatedCtrls, Array.from(idSet)]
 }
 
 export function proceedGameLoop(state: ShootingGameState): number[] {
@@ -43,41 +91,40 @@ export function proceedGameLoop(state: ShootingGameState): number[] {
   return ids
 }
 
+export function proceedAttrsByCtrl(attrs: CharacterAttrs, ctrl: CharacterControl, speed = characterSpeed): boolean {
+  let moved = false
+  // move
+  if (ctrl.left) {
+    attrs.x -= speed
+    moved = true
+  }
+  if (ctrl.up) {
+    attrs.y -= speed
+    moved = true
+  }
+  if (ctrl.down) {
+    attrs.y += speed
+    moved = true
+  }
+  if (ctrl.right) {
+    attrs.x += speed
+    moved = true
+  }
+
+  return moved
+}
+
 function proceedGameLoopCharId(state: ShootingGameState, id: number): boolean {
   const attrs = state.characterAttrsMap[id]
   const ctrl = state.characterCtrlMap[id]
 
   if (attrs && ctrl) {
-    let moved = false
-    // move
-    if (ctrl.left) {
-      attrs.x -= characterSpeed
-      moved = true
-    }
-    if (ctrl.up) {
-      attrs.y -= characterSpeed
-      moved = true
-    }
-    if (ctrl.down) {
-      attrs.y += characterSpeed
-      moved = true
-    }
-    if (ctrl.right) {
-      attrs.x += characterSpeed
-      moved = true
-    }
+    let moved = proceedAttrsByCtrl(attrs, ctrl)
 
     // weapon
     // attrs.weapon = ctrl.weapon
     // angle
     // attrs.angle = ctrl.angle
-
-    if (ctrl.fire) {
-      // TODO fire
-      // check if alive
-      // check if too close to last fire
-      // fire
-    }
 
     return moved
   }
@@ -104,7 +151,7 @@ export function encodeAllShooters(state: ShootingGameState, ids?: number[]): Arr
 }
 
 function getAttrsArr(state: ShootingGameState, ids: number[]): CharacterAttrs[] {
-  const attrsArr = ids.map(id => state.characterAttrsMap[id])
+  const attrsArr = ids.map(id => state.characterAttrsMap[id]).filter(attrs => attrs)
 
   return attrsArr
 }

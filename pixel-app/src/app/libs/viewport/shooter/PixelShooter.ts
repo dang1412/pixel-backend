@@ -1,10 +1,11 @@
 import { Assets } from 'pixi.js'
 
-import { CharacterAttrs, CharacterControl, ctrlEqual, defaultCharacterAttrs } from 'adventure_engine/dist/shooting'
+import { CharacterAttrs, CharacterControl, ctrlEqual, defaultCharacterAttrs, proceedAttrsByCtrl, shootFirstHitObject } from 'adventure_engine/dist/shooting'
 
 import { PixelMap } from '../PixelMap'
 import { Shooter } from './Shooter'
-import { manifest } from './constants'
+import { gunhitState, manifest } from './constants'
+import { AnimatedSprite } from './AnimatedSprite'
 
 export class PixelShooter {
 
@@ -12,6 +13,10 @@ export class PixelShooter {
   selectingShooterId = 0
 
   private lastCtrl: CharacterControl | undefined
+  // [id, x, y, w, h][]
+  private shooterObjs: [number, number, number, number, number][] = []
+
+  stopGame = () => {}
 
   constructor(public map: PixelMap) {
     map.engine.alwaysRender = true
@@ -38,39 +43,46 @@ export class PixelShooter {
 
   async load() {
     Assets.init({ manifest })
-    await Assets.loadBundle('man-idle-knife')
-    await Assets.loadBundle('man-walk-knife')
-    await Assets.loadBundle('man-hit-knife')
-    await Assets.loadBundle('man-idle-gun')
-    await Assets.loadBundle('man-walk-gun')
-    await Assets.loadBundle('man-hit-gun')
-    await Assets.loadBundle('man-idle-riffle')
-    await Assets.loadBundle('man-walk-riffle')
-    await Assets.loadBundle('man-hit-riffle')
-    await Assets.loadBundle('man-idle-bat')
-    await Assets.loadBundle('man-walk-bat')
-    await Assets.loadBundle('man-hit-bat')
-
-    Assets.add({alias: 'shooter_select', src: '/shooter/circle.png'})
+    await Assets.loadBundle([
+      'man-idle-knife',
+      'man-walk-knife',
+      'man-hit-knife',
+      'man-idle-gun',
+      'man-walk-gun',
+      'man-hit-gun',
+      'man-idle-riffle',
+      'man-walk-riffle',
+      'man-hit-riffle',
+      'man-idle-bat',
+      'man-walk-bat',
+      'man-hit-bat',
+      'gunhit',
+      'man-dead',
+    ])
+    Assets.add({alias: 'shooter_select', src: '/pixel_shooter/circle.png'})
     await Assets.load('shooter_select')
 
     console.log('Done loading')
 
     // mouse move
-    this.map.engine.on('mousemove', (ex: number, ey: number, px: number, py: number, cx: number, cy: number) => {
+    const onmousemove = (ex: number, ey: number, px: number, py: number, cx: number, cy: number) => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
       if (shooter) {
         shooter.setAngle(cx, cy)
       }
-    })
+    }
 
-    this.map.engine.on('dropman', (px: number, py: number) => {
+    const ondropman = (px: number, py: number) => {
       // request onMatch new shooter
       this.requestAddShooter(px * 100, py * 100)
-    })
+    }
+
+    this.map.engine.on('mousemove', onmousemove)
+    this.map.engine.on('dropman', ondropman)
 
     // key pressed
-    document.addEventListener('keydown', (e) => {
+    let lastFireTime = 0
+    const keydown = (e: KeyboardEvent) => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
       if (!shooter) return
       if (e.key === '1') {  // knife
@@ -94,12 +106,17 @@ export class PixelShooter {
       }
 
       if (e.key === 'f') {
+        // let time = Date.now()
+        // if (time - lastFireTime > 1000) {
+          
+        // }
         shooter.ctrl.fire = true
       }
       
       console.log('keydown', e.key)
-    })
-    document.addEventListener('keyup', (e) => {
+    }
+
+    const keyup = (e: KeyboardEvent) => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
       if (!shooter) return
       if (e.key === 'a') {
@@ -117,20 +134,48 @@ export class PixelShooter {
       }
 
       console.log('keyup', e.key)
-    })
+    }
+    document.addEventListener('keydown', keydown)
+    document.addEventListener('keyup', keyup)
 
     // request ctrl periodically
-    let tickCount = 0
-    this.map.engine.addTick(() => {
+    let count = 0
+    const intervalID = setInterval(() => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
-      if (tickCount === 0 && shooter) {
-        if (!this.lastCtrl || !ctrlEqual(shooter.ctrl, this.lastCtrl)) {
-          this.lastCtrl = Object.assign({}, shooter.ctrl)
-          this.requestCtrl(shooter.ctrl)
-        }
+      if (!shooter) return
+      const moved = shooter.ctrl.up || shooter.ctrl.down || shooter.ctrl.left || shooter.ctrl.right
+      const controlled =  moved || shooter.ctrl.fire || this.lastCtrl?.weapon !== shooter.ctrl.weapon || this.lastCtrl?.angle !== shooter.ctrl.angle
+      if (controlled) {
+        this.lastCtrl = Object.assign({}, shooter.ctrl)
+        // request control to server
+        this.requestCtrl(shooter.ctrl)
+        // predict own move
+        proceedAttrsByCtrl(shooter.attrs, shooter.ctrl, 25)
+        // predict own shoot
+        // if (shooter.ctrl.fire) this.shoot(this.selectingShooterId)
       }
-      tickCount = (tickCount + 1) % 5
-    })
+
+      if (!moved) {
+        // counting
+        count ++
+        if (count > 4) {
+          // update with latest server values if stand for more than 3 counts
+          shooter.updateWithLatestServer()
+        }
+      } else {
+        count = 0
+      }
+    }, 100)
+
+    this.stopGame = () => {
+      this.map.engine.removeListener('mousemove', onmousemove)
+      this.map.engine.removeListener('dropman', ondropman)
+
+      document.removeEventListener('keydown', keydown)
+      document.removeEventListener('keyup', keyup)
+
+      clearInterval(intervalID)
+    }
   }
 
   addShooter(id: number, attrs?: CharacterAttrs) {
@@ -139,21 +184,52 @@ export class PixelShooter {
     }
   }
 
+  // process ctrl signals from server
   updateCtrls(ctrls: CharacterControl[]) {
+    this.shooterObjs = Object.values(this.idCharacterMap).map(char => [char.attrs.id, char.attrs.x - 50, char.attrs.y - 50, 100, 100])
+
     for (let ctrl of ctrls) {
       const char = this.idCharacterMap[ctrl.id]
       if (!char) continue
 
-      if (ctrl.id === this.selectingShooterId && !ctrlEqual(char.ctrl, ctrl)) {
-        // chances are the current ctrl is newer, update server
-        this.requestCtrl(char.ctrl)
-      } else {
-        // update
-        char.ctrl = ctrl
+      if (ctrl.id !== this.selectingShooterId) {
+        // update from server
+        char.ctrl.weapon = ctrl.weapon
+        char.ctrl.fire = ctrl.fire
+        char.ctrl.angle = ctrl.angle
+      }
+
+      if (ctrl.fire) {
+        // perform shoot locally
+        if (ctrl.weapon === 2 || ctrl.weapon === 3) this.shoot(ctrl.id)
       }
     }
   }
 
+  // perform shoot locally
+  shoot(id: number) {
+    const char = this.idCharacterMap[id]
+    if (!char) return
+
+    const objs = this.shooterObjs
+    const angle = char.ctrl.angle / 100 - 1.5 * Math.PI
+    const hitP = shootFirstHitObject(char.attrs.x, char.attrs.y, angle, objs)
+
+    console.log('hitP', objs, hitP)
+    if (hitP) {
+      const animatedHit = new AnimatedSprite(gunhitState)
+      animatedHit.speed = 0.1
+      animatedHit.sprite.rotation = angle + Math.PI / 2
+      this.map.scene.getMainContainer().addChild(animatedHit.sprite)
+      this.map.scene.setImagePosition(animatedHit.sprite, hitP[1] / 100, hitP[2] / 100, 1, 1)
+
+      animatedHit.start(() => {
+        this.map.scene.getMainContainer().removeChild(animatedHit.sprite)
+      })
+    }
+  }
+
+  // update 
   updateMatch(attrsArr: CharacterAttrs[]) {
     for (const attrs of attrsArr) {
       const id = attrs.id
@@ -161,8 +237,21 @@ export class PixelShooter {
         this.addShooter(id, attrs)
 
         const shooter = this.idCharacterMap[id]
-        // update current attrs
-        shooter.attrs = attrs
+        // latest server values, for being controlled character to update when stop moving
+        shooter.setLatestServer(attrs.x, attrs.y)
+        if (id !== this.selectingShooterId) {
+          // update current attrs
+          // shooter.attrs = attrs
+          shooter.updateWithLatestServer()
+        }
+
+        shooter.attrs.hp = attrs.hp
+        shooter.drawHp()
+        if (attrs.hp <= 0) {
+          console.log('Shooter dead', attrs.id)
+          shooter.dead()
+          delete this.idCharacterMap[attrs.id]
+        }
       }
     }
   }

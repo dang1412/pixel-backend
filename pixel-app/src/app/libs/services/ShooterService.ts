@@ -1,6 +1,6 @@
 import { Client, Session, Socket } from '@heroiclabs/nakama-js'
 import { v4 as uuidv4 } from 'uuid'
-import { CharacterControl, ShootingGameStateUpdates, decodeShootingGameUpdates, encodeControls, decodeControls, encodeAttrsArray, CharacterAttrs, decodeAttrsArray, getOpcode } from 'adventure_engine/dist/shooting'
+import { CharacterControl, encodeControls, decodeControls, encodeAttrsArray, CharacterAttrs, decodeAttrsArray, getOpcode } from 'adventure_engine/dist/shooting'
 
 export class ShooterService {
   
@@ -56,7 +56,7 @@ export class ShooterService {
 
   leaveMatch() {
     if (this.socket && this.matchId) {
-      this.socket?.leaveMatch(this.matchId)
+      this.socket.leaveMatch(this.matchId)
     }
   }
 
