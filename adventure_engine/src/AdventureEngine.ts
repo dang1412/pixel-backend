@@ -1,5 +1,5 @@
 import { ActionInfo, AdventureState, AdventureUpdate, BeastAttrs, WeaponAttrs, defaultBeastAttrs } from './types'
-import { getPixelsFromArea, getPixelXYFromIndex } from './utils'
+import { getPixelsFromArea, getPixelXYFromIndex, WORLD_WIDTH } from './utils'
 
 export class AdventureEngine {
   // // beast_id => attributes
@@ -99,8 +99,8 @@ export class AdventureEngine {
     const beastAttrs = Object.assign({}, defaultBeastAttrs, state.beastTypeAttrsMap[type] || {}, attrs || {})
     state.beastAttrsMap[beastId] = beastAttrs
 
-    // const [x, y] = getPixelXYFromIndex(pixel, 100)
-    // const pixels = getPixelsFromArea({x, y, w: beastAttrs.w, h: beastAttrs.h}, 100)
+    // const [x, y] = getPixelXYFromIndex(pixel, WORLD_WIDTH)
+    // const pixels = getPixelsFromArea({x, y, w: beastAttrs.w, h: beastAttrs.h}, WORLD_WIDTH)
 
     // check if space empty
     // for (const p of pixels) if (state.pixelBeastMap[p] && state.pixelBeastMap[p] !== beastId) {
@@ -254,8 +254,8 @@ export class AdventureEngine {
 
   static executeMove(state: AdventureState, { beastId, pixel }: ActionInfo): boolean {
     const attr = state.beastAttrsMap[beastId]
-    const [x, y] = getPixelXYFromIndex(pixel, 100)
-    const pixels = getPixelsFromArea({x, y, w: attr.w, h: attr.h}, 100)
+    const [x, y] = getPixelXYFromIndex(pixel, WORLD_WIDTH)
+    const pixels = getPixelsFromArea({x, y, w: attr.w, h: attr.h}, WORLD_WIDTH)
     // check if target pixels are empty
     for (const p of pixels) if (state.pixelBeastMap[p] && state.pixelBeastMap[p] !== beastId) {
       return false
@@ -264,8 +264,8 @@ export class AdventureEngine {
     // clear from pixels
     const from = state.beastPixelMap[beastId]
     if (from >= 0) {
-      const [fx, fy] = getPixelXYFromIndex(from, 100)
-      const fromPixels = getPixelsFromArea({ x: fx, y: fy, w: attr.w, h: attr.h }, 100)
+      const [fx, fy] = getPixelXYFromIndex(from, WORLD_WIDTH)
+      const fromPixels = getPixelsFromArea({ x: fx, y: fy, w: attr.w, h: attr.h }, WORLD_WIDTH)
       for (const fp of fromPixels) delete state.pixelBeastMap[fp]
     }
   
@@ -283,10 +283,10 @@ export class AdventureEngine {
 
     // get the weapon attributes or default
     const { damage, damageArea } = state.weaponAttrsMap[type] || { damage: 1, damageArea: {x: 0, y: 0, w: 1, h: 1} }
-    const [tarx, tary] = getPixelXYFromIndex(pixel, 100)
+    const [tarx, tary] = getPixelXYFromIndex(pixel, WORLD_WIDTH)
     const [x, y, w, h] = [tarx + damageArea.x, tary + damageArea.y, damageArea.w, damageArea.h]
 
-    const damagedPixels = getPixelsFromArea({x, y, w, h}, 100)
+    const damagedPixels = getPixelsFromArea({x, y, w, h}, WORLD_WIDTH)
 
     for (let target of damagedPixels) {
       const update = AdventureEngine.receiveDamage(state, target, damage)
@@ -330,8 +330,8 @@ export class AdventureEngine {
     const attrs = state.beastAttrsMap[beastId]
     const pixel = state.beastPixelMap[beastId]
 
-    const [x, y] = getPixelXYFromIndex(pixel, 100)
-    const pixels = getPixelsFromArea({x, y, w: attrs.w, h: attrs.h}, 100)
+    const [x, y] = getPixelXYFromIndex(pixel, WORLD_WIDTH)
+    const pixels = getPixelsFromArea({x, y, w: attrs.w, h: attrs.h}, WORLD_WIDTH)
     for (const p of pixels) delete state.pixelBeastMap[p]
 
     delete state.beastPixelMap[beastId]

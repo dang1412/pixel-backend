@@ -1,12 +1,13 @@
 import { describe, expect, test } from '@jest/globals'
 import { AdventureEngine } from './AdventureEngine'
 import { decodeMatchUpdate, encodeMatchUpdate } from './flatbuffer/encode'
-import { AdventureUpdate } from './types'
+import { AdventureState, AdventureUpdate, BeastAttrs } from './types'
+import { WORLD_WIDTH, getPixelIndex, getPixelsFromArea } from './utils'
 
 describe('AdventureEngine', () => {
   test('initState state', () => {
     const state = AdventureEngine.initState()
-    expect(state.weaponAttrsMap[1]).toEqual({ damage: 1, damageArea: {x: -1, y: -1, w: 3, h: 3} })
+    expect(state.weaponAttrsMap[1]).toEqual({ damage: 1, damageArea: {x: -1, y: 0, w: 3, h: 3} })
   })
 
   test('onboardBeast should work', () => {
@@ -115,4 +116,37 @@ describe('AdventureEngine', () => {
     }
     expect(updates).toEqual(expectRs)
   })
+
+  test('onboardBeast bigger than 1x1 should work', () => {
+    const state = AdventureEngine.initState()
+
+    expect(onboardBeastXY(state, 1, 20, 30, {})).toBe(true)
+    expect(onboardBeastXY(state, 2, 19, 29, {w: 3, h: 3})).toBe(false)
+    expect(onboardBeastXY(state, 2, 19, 31, {w: 3, h: 3})).toBe(true)
+
+    // confirm location
+    for (const p of getPixelsFromArea({x: 19, y: 31, w: 3, h: 3}, WORLD_WIDTH)) {
+      expect(state.pixelBeastMap[p]).toBe(2)
+    }
+    expect(state.beastPixelMap[2]).toBe(getPixelIndex(19, 31, WORLD_WIDTH))
+
+    // move beast with size 3x3 to (20, 31)
+    AdventureEngine.executeMove(state, { beastId: 2, pixel: getPixelIndex(20, 31, WORLD_WIDTH) })
+
+    // confirm new location
+    for (const p of getPixelsFromArea({x: 20, y: 31, w: 3, h: 3}, WORLD_WIDTH)) {
+      expect(state.pixelBeastMap[p]).toBe(2)
+    }
+    expect(state.beastPixelMap[2]).toBe(getPixelIndex(20, 31, WORLD_WIDTH))
+
+    // confirm spaces behind
+    for (const p of getPixelsFromArea({x: 19, y: 31, w: 1, h: 3}, WORLD_WIDTH)) {
+      expect(state.pixelBeastMap[p]).toBe(undefined)
+    }
+  })
 })
+
+function onboardBeastXY(state: AdventureState, beastId: number, x: number, y: number, attr: BeastAttrs): boolean {
+  const pixel = getPixelIndex(x, y, WORLD_WIDTH)
+  return AdventureEngine.onboardBeast(state, beastId, pixel, [], attr)
+}
