@@ -56,6 +56,9 @@ export class PixelShooter {
       'man-idle-bat',
       'man-walk-bat',
       'man-hit-bat',
+      'man-idle-flame',
+      'man-walk-flame',
+      'man-hit-flame',
       'gunhit',
       'man-dead',
     ])
@@ -93,6 +96,8 @@ export class PixelShooter {
         shooter.ctrl.weapon = 3
       } else if (e.key === '4') { // bat
         shooter.ctrl.weapon = 4
+      } else if (e.key === '5') { // flame
+        shooter.ctrl.weapon = 5
       }
 
       if (e.key === 'a') {

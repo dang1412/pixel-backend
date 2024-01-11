@@ -5,7 +5,7 @@ import { characterStates } from './constants'
 import { CharacterAttrs, CharacterControl } from 'adventure_engine/dist/shooting'
 import { PixelShooter } from '.'
 
-const weapons = ['', 'knife', 'gun', 'riffle', 'bat']
+const weapons = ['', 'knife', 'gun', 'riffle', 'bat', 'flame']
 
 export class Shooter {
 
