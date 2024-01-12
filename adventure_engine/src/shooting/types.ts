@@ -41,6 +41,9 @@ export const defaultCharacterControl: CharacterControl = {
 export interface ShootingGameState {
   characterAttrsMap: {[id: number]: CharacterAttrs}
   characterCtrlMap: {[id: number]: CharacterControl}
+
+  // 1 pixel can hold more than 1 shooter
+  positionCharactersMap: {[id: number]: number[]}
 }
 
 export interface ShootingGameStateUpdates {
