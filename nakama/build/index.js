@@ -129,10 +129,62 @@ function decodeAttrsArray(buffer) {
   return attrsArr;
 }
 
-var WORLD_WIDTH = 10000;
-var WORLD_HEIGHT = 10000;
+function getPixelIndex(x, y, w) {
+  return y * w + x;
+}
+function getPixelXYFromIndex(index, w) {
+  var x = index % w;
+  var y = (index - x) / w;
+  return [x, y];
+}
+
+function getPixelsFromArea(area, mapWidth) {
+  var indexes = [];
+  for (var j = 0; j < area.h; j++) {
+    var index = getPixelIndex(area.x, area.y + j, mapWidth);
+    for (var i = 0; i < area.w; i++) {
+      indexes.push(index + i);
+    }
+  }
+  return indexes;
+}
+
+var WORLD_WIDTH = 100;
+var WORLD_HEIGHT = 100;
+
 function angleEqual(angle, i) {
   return Math.round(angle * 100) === Math.round(i * Math.PI * 100);
+}
+function distanceToVerticalX(x, y, angle, x1) {
+  var y1 = y + Math.tan(angle) * (x1 - x);
+  return Math.abs(x1 - x) + Math.abs(y1 - y);
+}
+function distanceToHorizontalY(x, y, angle, y1) {
+  var x1 = x + (y1 - y) / Math.tan(angle);
+  return Math.abs(x1 - x) + Math.abs(y1 - y);
+}
+function proceedShootLinePixels(x, y, angle, proceedPixel) {
+  var dirx = angleEqual(angle, 0.5) || angleEqual(angle, -0.5) ? 0 : angle > -Math.PI / 2 && angle < Math.PI / 2 ? 1 : -1;
+  var diry = angleEqual(angle, 0) || angleEqual(angle, 1) || angleEqual(angle, -1) ? 0 : angle > 0 ? 1 : -1;
+  var px = Math.floor(x);
+  var py = Math.floor(y);
+  var vx = dirx <= 0 ? px : px + 1;
+  var hy = diry <= 0 ? py : py + 1;
+  var dvx = dirx !== 0 ? distanceToVerticalX(x, y, angle, vx) : Infinity;
+  var dhy = diry !== 0 ? distanceToHorizontalY(x, y, angle, hy) : Infinity;
+  while (vx >= 0 && vx <= WORLD_WIDTH && hy >= 0 && hy <= WORLD_HEIGHT) {
+    var iscontinue = proceedPixel(px, py);
+    if (!iscontinue) break;
+    if (dvx <= dhy) {
+      px += dirx;
+      vx += dirx;
+      dvx = distanceToVerticalX(x, y, angle, vx);
+    } else {
+      py += diry;
+      hy += diry;
+      dhy = distanceToHorizontalY(x, y, angle, hy);
+    }
+  }
 }
 function findBoundaryIntersectPoint(x, y, angle) {
   if (angleEqual(angle, 0)) {
@@ -168,17 +220,14 @@ function intersect(x1, y1, x2, y2, x3, y3, x4, y4) {
   var y = y1 + ua * (y2 - y1);
   return [x, y];
 }
-function shootHitObject(x, y, angle, obj) {
-  var _a = findBoundaryIntersectPoint(x, y, angle),
-    bx = _a[0],
-    by = _a[1];
+function shootHitObject(x, y, bx, by, obj) {
   var ox1 = obj[0],
     oy1 = obj[1],
     w = obj[2],
     h = obj[3];
-  var _b = [ox1 + w, oy1 + h],
-    ox2 = _b[0],
-    oy2 = _b[1];
+  var _a = [ox1 + w, oy1 + h],
+    ox2 = _a[0],
+    oy2 = _a[1];
   if (x >= ox1 && x <= ox2 && y >= oy1 && y <= oy2) return null;
   var segments = [[ox1, oy1, ox2, oy1], [ox2, oy1, ox2, oy2], [ox2, oy2, ox1, oy2], [ox1, oy2, ox1, oy1]];
   var hitPoint = null;
@@ -194,17 +243,36 @@ function shootHitObject(x, y, angle, obj) {
   }
   return hitPoint;
 }
-function shootFirstHitObject(x, y, angle, objs) {
-  var firstHit = null;
-  var distance = 0;
-  for (var _i = 0, objs_1 = objs; _i < objs_1.length; _i++) {
-    var obj = objs_1[_i];
-    var hitP = shootHitObject(x, y, angle, obj.slice(1));
-    if (hitP && (!firstHit || distance > hitP[2])) {
-      firstHit = [obj[0], hitP[0], hitP[1]];
-      distance = hitP[2];
+function shootFirstHitObject(id, angle, positionCharactersMap, characterAttrsMap, buildingBlocks) {
+  var attrs = characterAttrsMap[id];
+  if (!attrs) return null;
+  var _a = [attrs.x / 100, attrs.y / 100],
+    x = _a[0],
+    y = _a[1];
+  var _b = findBoundaryIntersectPoint(x, y, angle),
+    bx = _b[0],
+    by = _b[1];
+  var firstHit = [0, bx, by];
+  var distance = Infinity;
+  proceedShootLinePixels(x, y, angle, function (px, py) {
+    var pixel = getPixelIndex(px, py, WORLD_WIDTH);
+    var shooterIds = positionCharactersMap[pixel] || [];
+    var objs = buildingBlocks[pixel] ? [[0, px, py, 1, 1]] : shooterIds.map(function (_id) {
+      return _id !== id && characterAttrsMap[_id] ? [_id, (characterAttrsMap[_id].x - 50) / 100, (characterAttrsMap[_id].y - 50) / 100, 1, 1] : null;
+    });
+    for (var _i = 0, objs_1 = objs; _i < objs_1.length; _i++) {
+      var obj = objs_1[_i];
+      if (obj) {
+        var hitP = shootHitObject(x, y, bx, by, obj.slice(1));
+        if (hitP && distance > hitP[2]) {
+          firstHit = [obj[0], hitP[0], hitP[1]];
+          distance = hitP[2];
+          return false;
+        }
+      }
     }
-  }
+    return true;
+  });
   return firstHit;
 }
 
@@ -219,6 +287,47 @@ var defaultCharacterControl = {
   id: 0
 };
 
+function getShooterArea(shooter) {
+  return {
+    x: (shooter.x - 50) / 100,
+    y: (shooter.y - 50) / 100,
+    w: 1,
+    h: 1
+  };
+}
+function shooterOnPixels(shooter) {
+  var shooterArea = getShooterArea(shooter);
+  var pixelArea = getPixelAreaFromObjectArea(shooterArea);
+  return getPixelsFromArea(pixelArea, WORLD_WIDTH);
+}
+function getPixelAreaFromObjectArea(objArea) {
+  var x = objArea.x,
+    y = objArea.y,
+    w = objArea.w,
+    h = objArea.h;
+  var x1 = Math.floor(x);
+  var y1 = Math.floor(y);
+  var x2 = Math.ceil(x + w) - 1;
+  var y2 = Math.ceil(y + h) - 1;
+  return {
+    x: x1,
+    y: y1,
+    w: x2 - x1 + 1,
+    h: y2 - y1 + 1
+  };
+}
+function findUniqueElements(arr1, arr2) {
+  var set1 = new Set(arr1);
+  var set2 = new Set(arr2);
+  var uniqueToSet1 = arr1.filter(function (a) {
+    return !set2.has(a);
+  });
+  var uniqueToSet2 = arr2.filter(function (a) {
+    return !set1.has(a);
+  });
+  return [uniqueToSet1, uniqueToSet2];
+}
+
 var characterSpeed = 60;
 function cleanupDeadChars(state) {
   var ids = Object.keys(state.characterAttrsMap);
@@ -229,10 +338,11 @@ function cleanupDeadChars(state) {
     if (attrs && attrs.hp <= 0) {
       delete state.characterAttrsMap[id];
       delete state.characterCtrlMap[id];
+      removeShooter(attrs, state.positionCharactersMap);
     }
   }
 }
-function proceedControls(state, ctrls, speed) {
+function proceedControls(state, ctrls, speed, logger) {
   var idCtrlMap = {};
   for (var _i = 0, ctrls_1 = ctrls; _i < ctrls_1.length; _i++) {
     var ctrl = ctrls_1[_i];
@@ -244,21 +354,23 @@ function proceedControls(state, ctrls, speed) {
   }
   var idSet = new Set();
   var updatedCtrls = Object.values(idCtrlMap);
-  var charObjs = Object.values(state.characterAttrsMap).map(function (attrs) {
-    return [attrs.id, attrs.x - 50, attrs.y - 50, 100, 100];
-  });
   for (var _a = 0, updatedCtrls_1 = updatedCtrls; _a < updatedCtrls_1.length; _a++) {
     var ctrl = updatedCtrls_1[_a];
     if (ctrl.fire) {
-      var attrs = state.characterAttrsMap[ctrl.id];
-      var angle = ctrl.angle / 100 - 1.5 * Math.PI;
-      var hitP = attrs ? shootFirstHitObject(attrs.x, attrs.y, angle, charObjs) : null;
-      if (hitP) {
-        var targetAttrs = state.characterAttrsMap[hitP[0]];
-        if (targetAttrs) {
-          targetAttrs.hp -= 5;
-          idSet.add(targetAttrs.id);
-          if (targetAttrs.hp <= 0) ;
+      if (ctrl.weapon === 2 || ctrl.weapon === 3) {
+        var attrs = state.characterAttrsMap[ctrl.id];
+        var angle = ctrl.angle / 100 - 1.5 * Math.PI;
+        var hitP = attrs ? shootFirstHitObject(attrs.id, angle, state.positionCharactersMap, state.characterAttrsMap, state.buildingBlocks) : null;
+        if (hitP) {
+          if (logger) {
+            logger.info("Hit %v", hitP);
+          }
+          var targetAttrs = state.characterAttrsMap[hitP[0]];
+          if (targetAttrs) {
+            targetAttrs.hp -= 5;
+            idSet.add(targetAttrs.id);
+            if (targetAttrs.hp <= 0) ;
+          }
         }
       }
     }
@@ -268,34 +380,99 @@ function proceedControls(state, ctrls, speed) {
     var id = ctrl.id;
     var attrs = state.characterAttrsMap[id];
     if (attrs) {
-      var moved = proceedAttrsByCtrl(attrs, ctrl, speed);
+      var moved = proceedMoveByCtrl(attrs, ctrl, state.positionCharactersMap, state.buildingBlocks, speed);
       if (moved) idSet.add(id);
     }
   }
   return [updatedCtrls, Array.from(idSet)];
 }
-function proceedAttrsByCtrl(attrs, ctrl, speed) {
+function removeShooter(attrs, positionCharactersMap) {
+  var pixels = shooterOnPixels(attrs);
+  removeFromPixels(positionCharactersMap, attrs.id, pixels);
+}
+function proceedMoveByCtrl(attrs, ctrl, positionCharactersMap, buildingBlocks, speed) {
   if (speed === void 0) {
     speed = characterSpeed;
   }
-  var moved = false;
+  var isMove = false;
+  var _a = [attrs.x, attrs.y],
+    x = _a[0],
+    y = _a[1];
   if (ctrl.left) {
-    attrs.x -= speed;
-    moved = true;
+    if (proceedMove(attrs, x - speed, y, positionCharactersMap, buildingBlocks)) {
+      x -= speed;
+      isMove = true;
+    }
   }
   if (ctrl.up) {
-    attrs.y -= speed;
-    moved = true;
+    if (proceedMove(attrs, x, y - speed, positionCharactersMap, buildingBlocks)) {
+      y -= speed;
+      isMove = true;
+    }
   }
   if (ctrl.down) {
-    attrs.y += speed;
-    moved = true;
+    if (proceedMove(attrs, x, y + speed, positionCharactersMap, buildingBlocks)) {
+      y += speed;
+      isMove = true;
+    }
   }
   if (ctrl.right) {
-    attrs.x += speed;
-    moved = true;
+    if (proceedMove(attrs, x + speed, y, positionCharactersMap, buildingBlocks)) {
+      x += speed;
+      isMove = true;
+    }
   }
-  return moved;
+  return isMove;
+}
+function proceedMove(attrs, x, y, positionCharactersMap, buildingBlocks) {
+  if (x < 0 || x > WORLD_WIDTH * 100 || y < 0 || y > WORLD_HEIGHT * 100) return false;
+  var newPixels = shooterOnPixels({
+    x: x,
+    y: y,
+    hp: 0,
+    id: 0
+  });
+  for (var _i = 0, newPixels_1 = newPixels; _i < newPixels_1.length; _i++) {
+    var pixel = newPixels_1[_i];
+    if (buildingBlocks[pixel]) return false;
+  }
+  setMove(attrs, x, y, positionCharactersMap);
+  return true;
+}
+function setMove(attrs, x, y, positionCharactersMap) {
+  var beforeMovePixels = shooterOnPixels(attrs);
+  var afterMovePixels = shooterOnPixels({
+    x: x,
+    y: y,
+    hp: 0,
+    id: 0
+  });
+  var _a = findUniqueElements(beforeMovePixels, afterMovePixels),
+    oldPixels = _a[0],
+    newPixels = _a[1];
+  attrs.x = x;
+  attrs.y = y;
+  removeFromPixels(positionCharactersMap, attrs.id, oldPixels);
+  addToPixels(positionCharactersMap, attrs.id, newPixels);
+}
+function removeFromPixels(positionCharactersMap, id, pixels) {
+  for (var _i = 0, pixels_1 = pixels; _i < pixels_1.length; _i++) {
+    var pixel = pixels_1[_i];
+    if (positionCharactersMap[pixel]) {
+      positionCharactersMap[pixel] = positionCharactersMap[pixel].filter(function (_id) {
+        return _id !== id;
+      });
+      if (positionCharactersMap[pixel].length === 0) {
+        delete positionCharactersMap[pixel];
+      }
+    }
+  }
+}
+function addToPixels(positionCharactersMap, id, pixels) {
+  for (var _i = 0, pixels_2 = pixels; _i < pixels_2.length; _i++) {
+    var pixel = pixels_2[_i];
+    if (!positionCharactersMap[pixel]) positionCharactersMap[pixel] = [id];else positionCharactersMap[pixel].push(id);
+  }
 }
 function addShooter(state, x, y) {
   var id = 1;
@@ -310,6 +487,8 @@ function addShooter(state, x, y) {
   state.characterCtrlMap[id] = Object.assign({}, defaultCharacterControl, {
     id: id
   });
+  var newPixels = shooterOnPixels(attrs);
+  addToPixels(state.positionCharactersMap, attrs.id, newPixels);
   return attrs;
 }
 function encodeAllShooters(state, ids) {
@@ -326,13 +505,69 @@ function getAttrsArr(state, ids) {
   return attrsArr;
 }
 
+var areas = [{
+  x: 41,
+  y: 33,
+  w: 2,
+  h: 2
+}, {
+  x: 37,
+  y: 42,
+  w: 5,
+  h: 3
+}, {
+  x: 56,
+  y: 34,
+  w: 8,
+  h: 3
+}, {
+  x: 48,
+  y: 48,
+  w: 3,
+  h: 3
+}, {
+  x: 37,
+  y: 53,
+  w: 4,
+  h: 4
+}, {
+  x: 60,
+  y: 48,
+  w: 6,
+  h: 4
+}, {
+  x: 49,
+  y: 39,
+  w: 6,
+  h: 3
+}, {
+  x: 50,
+  y: 60,
+  w: 5,
+  h: 3
+}];
+function initGameState() {
+  var buildingBlocks = {};
+  for (var _i = 0, areas_1 = areas; _i < areas_1.length; _i++) {
+    var area = areas_1[_i];
+    var pixels = getPixelsFromArea(area, WORLD_WIDTH);
+    for (var _a = 0, pixels_1 = pixels; _a < pixels_1.length; _a++) {
+      var pixel = pixels_1[_a];
+      buildingBlocks[pixel] = true;
+    }
+  }
+  return {
+    characterAttrsMap: {},
+    characterCtrlMap: {},
+    positionCharactersMap: {},
+    buildingBlocks: buildingBlocks
+  };
+}
+
 function matchInit$1(ctx, logger, nk, params) {
   logger.debug('PixelShooter match created');
   var presences = {};
-  var game = {
-    characterAttrsMap: {},
-    characterCtrlMap: {}
-  };
+  var game = initGameState();
   return {
     state: {
       presences: presences,
@@ -385,7 +620,7 @@ function matchLoop$1(ctx, logger, nk, dispatcher, tick, state, messages) {
     }
   });
   cleanupDeadChars(state.game);
-  var _a = proceedControls(state.game, ctrls, 25),
+  var _a = proceedControls(state.game, ctrls, 25, logger),
     updatedCtrls = _a[0],
     movedIds = _a[1];
   var updatedIds = __spreadArray(__spreadArray([], movedIds, true), newIds, true);
@@ -441,26 +676,6 @@ var defaultBeastAttrs = {
   w: 1,
   h: 1
 };
-
-function getPixelIndex(x, y, w) {
-  return y * w + x;
-}
-function getPixelXYFromIndex(index, w) {
-  var x = index % w;
-  var y = (index - x) / w;
-  return [x, y];
-}
-
-function getPixelsFromArea(area, mapWidth) {
-  var indexes = [];
-  for (var j = 0; j < area.h; j++) {
-    var index = getPixelIndex(area.x, area.y + j, mapWidth);
-    for (var i = 0; i < area.w; i++) {
-      indexes.push(index + i);
-    }
-  }
-  return indexes;
-}
 
 var AdventureEngine = function () {
   function AdventureEngine() {}
@@ -657,7 +872,7 @@ var AdventureEngine = function () {
     var beastId = _a.beastId,
       pixel = _a.pixel;
     var attr = state.beastAttrsMap[beastId];
-    var _b = getPixelXYFromIndex(pixel, 100),
+    var _b = getPixelXYFromIndex(pixel, WORLD_WIDTH),
       x = _b[0],
       y = _b[1];
     var pixels = getPixelsFromArea({
@@ -665,7 +880,7 @@ var AdventureEngine = function () {
       y: y,
       w: attr.w,
       h: attr.h
-    }, 100);
+    }, WORLD_WIDTH);
     for (var _i = 0, pixels_1 = pixels; _i < pixels_1.length; _i++) {
       var p = pixels_1[_i];
       if (state.pixelBeastMap[p] && state.pixelBeastMap[p] !== beastId) {
@@ -674,7 +889,7 @@ var AdventureEngine = function () {
     }
     var from = state.beastPixelMap[beastId];
     if (from >= 0) {
-      var _c = getPixelXYFromIndex(from, 100),
+      var _c = getPixelXYFromIndex(from, WORLD_WIDTH),
         fx = _c[0],
         fy = _c[1];
       var fromPixels = getPixelsFromArea({
@@ -682,7 +897,7 @@ var AdventureEngine = function () {
         y: fy,
         w: attr.w,
         h: attr.h
-      }, 100);
+      }, WORLD_WIDTH);
       for (var _d = 0, fromPixels_1 = fromPixels; _d < fromPixels_1.length; _d++) {
         var fp = fromPixels_1[_d];
         delete state.pixelBeastMap[fp];
@@ -710,7 +925,7 @@ var AdventureEngine = function () {
       },
       damage = _a.damage,
       damageArea = _a.damageArea;
-    var _b = getPixelXYFromIndex(pixel, 100),
+    var _b = getPixelXYFromIndex(pixel, WORLD_WIDTH),
       tarx = _b[0],
       tary = _b[1];
     var _c = [tarx + damageArea.x, tary + damageArea.y, damageArea.w, damageArea.h],
@@ -723,7 +938,7 @@ var AdventureEngine = function () {
       y: y,
       w: w,
       h: h
-    }, 100);
+    }, WORLD_WIDTH);
     for (var _i = 0, damagedPixels_1 = damagedPixels; _i < damagedPixels_1.length; _i++) {
       var target = damagedPixels_1[_i];
       var update = AdventureEngine.receiveDamage(state, target, damage);
@@ -758,7 +973,7 @@ var AdventureEngine = function () {
   AdventureEngine.beastDie = function (state, beastId) {
     var attrs = state.beastAttrsMap[beastId];
     var pixel = state.beastPixelMap[beastId];
-    var _a = getPixelXYFromIndex(pixel, 100),
+    var _a = getPixelXYFromIndex(pixel, WORLD_WIDTH),
       x = _a[0],
       y = _a[1];
     var pixels = getPixelsFromArea({
@@ -766,7 +981,7 @@ var AdventureEngine = function () {
       y: y,
       w: attrs.w,
       h: attrs.h
-    }, 100);
+    }, WORLD_WIDTH);
     for (var _i = 0, pixels_3 = pixels; _i < pixels_3.length; _i++) {
       var p = pixels_3[_i];
       delete state.pixelBeastMap[p];
