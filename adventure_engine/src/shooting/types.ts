@@ -1,3 +1,5 @@
+import { PixelArea } from '../utils'
+
 export interface CharacterAttrs {
   id: number // 1 byte
   hp: number // 1 byte
@@ -44,6 +46,8 @@ export interface ShootingGameState {
 
   // 1 pixel can hold more than 1 shooter
   positionCharactersMap: {[id: number]: number[]}
+  // buildings
+  buildingBlocks: {[id: number]: boolean}
 }
 
 export interface ShootingGameStateUpdates {

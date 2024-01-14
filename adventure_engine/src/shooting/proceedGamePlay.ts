@@ -1,6 +1,8 @@
+import { WORLD_HEIGHT, WORLD_WIDTH } from '../utils'
 import { shootFirstHitObject } from './calculateShoot'
 import { encodeAttrsArray } from './encodeFuncs'
 import { CharacterAttrs, CharacterControl, ShootingGameState, defaultCharacterAttrs, defaultCharacterControl } from './types'
+import { findUniqueElements, shooterOnPixels } from './utils'
 
 const characterSpeed = 60
 
@@ -25,11 +27,12 @@ export function cleanupDeadChars(state: ShootingGameState) {
     if (attrs && attrs.hp <= 0) {
       delete state.characterAttrsMap[id]
       delete state.characterCtrlMap[id]
+      removeShooter(attrs, state.positionCharactersMap)
     }
   }
 }
 
-export function proceedControls(state: ShootingGameState, ctrls: CharacterControl[], speed?: number): [CharacterControl[], number[]] {
+export function proceedControls(state: ShootingGameState, ctrls: CharacterControl[], speed?: number, logger?: any): [CharacterControl[], number[]] {
   const idCtrlMap: {[id: number]: CharacterControl} = {}
   
   // aggregate ctrls to execute fires, maximum 1 fire per character
@@ -46,13 +49,16 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
 
   // execute fires
   const updatedCtrls = Object.values(idCtrlMap)
-  const charObjs: [number, number, number, number, number][] = Object.values(state.characterAttrsMap).map(attrs => [attrs.id, attrs.x - 50, attrs.y - 50, 100, 100])
-  for (const ctrl of updatedCtrls) {
-    if (ctrl.fire) {
+  // const charObjs: [number, number, number, number, number][] = Object.values(state.characterAttrsMap).map(attrs => [attrs.id, attrs.x - 50, attrs.y - 50, 100, 100])
+  for (const ctrl of updatedCtrls) if (ctrl.fire) {
+    if (ctrl.weapon === 2 || ctrl.weapon === 3) {
       const attrs = state.characterAttrsMap[ctrl.id]
       const angle = ctrl.angle / 100 - 1.5 * Math.PI
-      const hitP = attrs ? shootFirstHitObject(attrs.x, attrs.y, angle, charObjs) : null
+      const hitP = attrs ? shootFirstHitObject(attrs.id, angle, state.positionCharactersMap, state.characterAttrsMap, state.buildingBlocks) : null
       if (hitP) {
+        if (logger) {
+          logger.info("Hit %v", hitP)
+        }
         const targetAttrs = state.characterAttrsMap[hitP[0]]
         if (targetAttrs) {
           targetAttrs.hp -= 5
@@ -72,7 +78,7 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
     const id = ctrl.id
     const attrs = state.characterAttrsMap[id]
     if (attrs) {
-      const moved = proceedAttrsByCtrl(attrs, ctrl, speed)
+      const moved = proceedMoveByCtrl(attrs, ctrl, state.positionCharactersMap, state.buildingBlocks, speed)
       if (moved) idSet.add(id)
     }
   }
@@ -80,56 +86,146 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
   return [updatedCtrls, Array.from(idSet)]
 }
 
-export function proceedGameLoop(state: ShootingGameState): number[] {
-  const ids: number[] = []
-  for (const key of Object.keys(state.characterAttrsMap)) {
-    const id = Number(key)
-    const moved = proceedGameLoopCharId(state, id)
-    if (moved) ids.push(id)
-  }
-
-  return ids
+export function removeShooter(attrs: CharacterAttrs, positionCharactersMap: {[id: number]: number[]}) {
+  const pixels = shooterOnPixels(attrs)
+  // remove from pixels
+  removeFromPixels(positionCharactersMap, attrs.id, pixels)
 }
 
-export function proceedAttrsByCtrl(attrs: CharacterAttrs, ctrl: CharacterControl, speed = characterSpeed): boolean {
-  let moved = false
+/**
+ * This function is used by server for all shooters move
+ * For client, only for being controlled shooter
+ * 
+ * @param attrs 
+ * @param ctrl 
+ * @param positionCharactersMap 
+ * @param buildingBlocks 
+ * @param speed 
+ * @returns 
+ */
+export function proceedMoveByCtrl(
+  attrs: CharacterAttrs,
+  ctrl: CharacterControl,
+  positionCharactersMap: {[id: number]: number[]},
+  buildingBlocks: {[id: number]: boolean},
+  speed = characterSpeed
+): boolean {
+  let isMove = false
+  let [x, y] = [attrs.x, attrs.y]
   // move
   if (ctrl.left) {
-    attrs.x -= speed
-    moved = true
+    if (proceedMove(attrs, x - speed, y, positionCharactersMap, buildingBlocks)) {
+      x -= speed
+      isMove = true
+    }
   }
   if (ctrl.up) {
-    attrs.y -= speed
-    moved = true
+    if (proceedMove(attrs, x, y - speed, positionCharactersMap, buildingBlocks)) {
+      y -= speed
+      isMove = true
+    }
   }
   if (ctrl.down) {
-    attrs.y += speed
-    moved = true
+    if (proceedMove(attrs, x, y + speed, positionCharactersMap, buildingBlocks)) {
+      y += speed
+      isMove = true
+    }
   }
   if (ctrl.right) {
-    attrs.x += speed
-    moved = true
+    if (proceedMove(attrs, x + speed, y, positionCharactersMap, buildingBlocks)) {
+      x += speed
+      isMove = true
+    }
   }
 
-  return moved
+  return isMove
 }
 
-function proceedGameLoopCharId(state: ShootingGameState, id: number): boolean {
-  const attrs = state.characterAttrsMap[id]
-  const ctrl = state.characterCtrlMap[id]
+/**
+ * Check and execute move if ok
+ * 
+ * @param attrs 
+ * @param x 
+ * @param y 
+ * @param positionCharactersMap 
+ * @param buildingBlocks 
+ * @returns 
+ */
+function proceedMove(
+  attrs: CharacterAttrs,
+  x: number,
+  y: number,
+  positionCharactersMap: {[id: number]: number[]},
+  buildingBlocks: {[id: number]: boolean},
+): boolean {
+  // check out of the map
+  if (x < 0 || x > WORLD_WIDTH * 100 || y < 0 || y > WORLD_HEIGHT * 100) return false
 
-  if (attrs && ctrl) {
-    let moved = proceedAttrsByCtrl(attrs, ctrl)
+  const newPixels = shooterOnPixels({x, y, hp: 0, id: 0})
 
-    // weapon
-    // attrs.weapon = ctrl.weapon
-    // angle
-    // attrs.angle = ctrl.angle
-
-    return moved
+  // check if newPixels are not building block
+  for (const pixel of newPixels) {
+    if (buildingBlocks[pixel]) return false
   }
 
-  return false
+  // TODO check if collide with other shooters
+
+  // execute move
+  setMove(attrs, x, y, positionCharactersMap)
+
+  return true
+}
+
+/**
+ * This function is also used by client, to update all shooter's position from server
+ * 
+ * @param attrs 
+ * @param x 
+ * @param y 
+ * @param positionCharactersMap 
+ */
+export function setMove(attrs: CharacterAttrs, x: number, y: number, positionCharactersMap: {[id: number]: number[]}) {
+  const beforeMovePixels = shooterOnPixels(attrs)
+  const afterMovePixels = shooterOnPixels({x, y, hp: 0, id: 0})
+  const [oldPixels, newPixels] = findUniqueElements(beforeMovePixels, afterMovePixels)
+
+  // move
+  attrs.x = x
+  attrs.y = y
+
+  // remove from old pixels
+  removeFromPixels(positionCharactersMap, attrs.id, oldPixels)
+
+  // add to new pixels
+  addToPixels(positionCharactersMap, attrs.id, newPixels)
+}
+
+/**
+ * 
+ * @param positionCharactersMap 
+ * @param id 
+ * @param pixels 
+ */
+export function removeFromPixels(positionCharactersMap: {[id: number]: number[]}, id: number, pixels: number[]) {
+  for (const pixel of pixels) if (positionCharactersMap[pixel]) {
+    positionCharactersMap[pixel] = positionCharactersMap[pixel].filter(_id => _id !== id)
+    if (positionCharactersMap[pixel].length === 0) {
+      delete positionCharactersMap[pixel]
+    }
+  }
+}
+
+/**
+ * 
+ * @param positionCharactersMap 
+ * @param id 
+ * @param pixels 
+ */
+export function addToPixels(positionCharactersMap: {[id: number]: number[]}, id: number, pixels: number[]) {
+  for (const pixel of pixels) {
+    if (!positionCharactersMap[pixel]) positionCharactersMap[pixel] = [id]
+    else positionCharactersMap[pixel].push(id)
+  }
 }
 
 export function addShooter(state: ShootingGameState, x: number, y: number): CharacterAttrs {
@@ -139,6 +235,10 @@ export function addShooter(state: ShootingGameState, x: number, y: number): Char
   const attrs: CharacterAttrs = { id, hp: 100, x, y }
   state.characterAttrsMap[id] = attrs
   state.characterCtrlMap[id] = Object.assign({}, defaultCharacterControl, { id })
+
+  // add to new pixels
+  const newPixels = shooterOnPixels(attrs)
+  addToPixels(state.positionCharactersMap, attrs.id, newPixels)
 
   return attrs
 }
