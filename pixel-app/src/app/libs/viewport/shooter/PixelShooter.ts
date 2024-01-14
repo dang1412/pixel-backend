@@ -1,6 +1,6 @@
 import { Assets } from 'pixi.js'
 
-import { CharacterAttrs, CharacterControl, ctrlEqual, defaultCharacterAttrs, proceedAttrsByCtrl, shootFirstHitObject } from 'adventure_engine/dist/shooting'
+import { CharacterAttrs, CharacterControl, addToPixels, ctrlEqual, defaultCharacterAttrs, initGameState, proceedMoveByCtrl, removeShooter, setMove, shootFirstHitObject, shooterOnPixels } from 'adventure_engine/dist/shooting'
 
 import { PixelMap } from '../PixelMap'
 import { Shooter } from './Shooter'
@@ -14,12 +14,16 @@ export class PixelShooter {
 
   private lastCtrl: CharacterControl | undefined
   // [id, x, y, w, h][]
-  private shooterObjs: [number, number, number, number, number][] = []
+  characterAttrsMap: {[id: number]: CharacterAttrs} = {}
+  positionCharactersMap: {[id: number]: number[]} = {}
+  buildingBlocks: {[id: number]: boolean}
 
   stopGame = () => {}
 
   constructor(public map: PixelMap) {
     map.engine.alwaysRender = true
+    const state = initGameState()
+    this.buildingBlocks = state.buildingBlocks
   }
 
   select(id: number) {
@@ -155,9 +159,7 @@ export class PixelShooter {
         // request control to server
         this.requestCtrl(shooter.ctrl)
         // predict own move
-        proceedAttrsByCtrl(shooter.attrs, shooter.ctrl, 25)
-        // predict own shoot
-        // if (shooter.ctrl.fire) this.shoot(this.selectingShooterId)
+        proceedMoveByCtrl(shooter.attrs, shooter.ctrl, this.positionCharactersMap, this.buildingBlocks, 25)
       }
 
       if (!moved) {
@@ -165,7 +167,7 @@ export class PixelShooter {
         count ++
         if (count > 4) {
           // update with latest server values if stand for more than 3 counts
-          shooter.updateWithLatestServer()
+          this.domove(shooter)
         }
       } else {
         count = 0
@@ -185,14 +187,18 @@ export class PixelShooter {
 
   addShooter(id: number, attrs?: CharacterAttrs) {
     if (!this.idCharacterMap[id]) {
-      this.idCharacterMap[id] = new Shooter(this, id, {...defaultCharacterAttrs, ...attrs})
+      const shooter = new Shooter(this, id, {...defaultCharacterAttrs, ...attrs})
+      this.idCharacterMap[id] = shooter
+      this.characterAttrsMap[id] = shooter.attrs
+
+      // add to new pixels
+      const onPixels = shooterOnPixels(shooter.attrs)
+      addToPixels(this.positionCharactersMap, id, onPixels)
     }
   }
 
   // process ctrl signals from server
   updateCtrls(ctrls: CharacterControl[]) {
-    this.shooterObjs = Object.values(this.idCharacterMap).map(char => [char.attrs.id, char.attrs.x - 50, char.attrs.y - 50, 100, 100])
-
     for (let ctrl of ctrls) {
       const char = this.idCharacterMap[ctrl.id]
       if (!char) continue
@@ -216,17 +222,16 @@ export class PixelShooter {
     const char = this.idCharacterMap[id]
     if (!char) return
 
-    const objs = this.shooterObjs
     const angle = char.ctrl.angle / 100 - 1.5 * Math.PI
-    const hitP = shootFirstHitObject(char.attrs.x, char.attrs.y, angle, objs)
+    const hitP = shootFirstHitObject(id, angle, this.positionCharactersMap, this.characterAttrsMap, this.buildingBlocks)
 
-    console.log('hitP', objs, hitP)
+    console.log('hitP', hitP)
     if (hitP) {
       const animatedHit = new AnimatedSprite(gunhitState)
       animatedHit.speed = 0.1
       animatedHit.sprite.rotation = angle + Math.PI / 2
       this.map.scene.getMainContainer().addChild(animatedHit.sprite)
-      this.map.scene.setImagePosition(animatedHit.sprite, hitP[1] / 100, hitP[2] / 100, 1, 1)
+      this.map.scene.setImagePosition(animatedHit.sprite, hitP[1], hitP[2], 1, 1)
 
       animatedHit.start(() => {
         this.map.scene.getMainContainer().removeChild(animatedHit.sprite)
@@ -246,19 +251,28 @@ export class PixelShooter {
         shooter.setLatestServer(attrs.x, attrs.y)
         if (id !== this.selectingShooterId) {
           // update current attrs
-          // shooter.attrs = attrs
-          shooter.updateWithLatestServer()
+          this.domove(shooter)
         }
 
         shooter.attrs.hp = attrs.hp
         shooter.drawHp()
         if (attrs.hp <= 0) {
-          console.log('Shooter dead', attrs.id)
-          shooter.dead()
-          delete this.idCharacterMap[attrs.id]
+          this.dodead(shooter)
         }
       }
     }
+    console.log('positionCharactersMap', this.positionCharactersMap)
+  }
+
+  domove(shooter: Shooter) {
+    setMove(shooter.attrs, shooter.latestServerX, shooter.latestServerY, this.positionCharactersMap)
+  }
+
+  dodead(shooter: Shooter) {
+    console.log('Shooter dead', shooter.id)
+    shooter.dead()
+    delete this.idCharacterMap[shooter.id]
+    removeShooter(shooter.attrs, this.positionCharactersMap)
   }
 
   requestCtrl(ctrl: CharacterControl) {}

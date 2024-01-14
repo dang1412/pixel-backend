@@ -27,8 +27,8 @@ export class Shooter {
   // update attrs x, y with these values when not controlling
   // for other not controlling characters,
   // update attrs x, y with server values immediately, hence not use these
-  private latestServerX = 0
-  private latestServerY = 0
+  latestServerX = 0
+  latestServerY = 0
 
   private selectingCircle = new Sprite()
 
@@ -90,11 +90,6 @@ export class Shooter {
     this.latestServerY = y
   }
 
-  updateWithLatestServer() {
-    this.attrs.x = this.latestServerX
-    this.attrs.y = this.latestServerY
-  }
-
   showSelect(visible: boolean) {
     this.selectingCircle.visible = visible
   }
@@ -134,7 +129,7 @@ export class Shooter {
     //     this.attrs.x += this.speed
     //   }
     // } else {
-    const moving = !(this.curX === this.attrs.x && this.curY === this.attrs.y)
+    const moving = this.curX !== this.attrs.x || this.curY !== this.attrs.y || this.ctrl.left || this.ctrl.right || this.ctrl.up || this.ctrl.down
     this.updatePos()
     // }
 
