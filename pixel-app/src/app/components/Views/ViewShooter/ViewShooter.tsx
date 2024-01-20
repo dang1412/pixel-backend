@@ -49,6 +49,11 @@ export const ViewShooter: React.FC<Props> = (props) => {
         allowToggleMode={false}
       />
       <img className='inline-block' id={`man-shooter`} src='/pixel_shooter/man_icon_no_bg.png' onDragStart={(e) => dragMan(e)} width="100" height="100" />
+      <div>
+        <p>Click on shooter to control</p>
+        <p>A W S D to move, f to fire</p>
+        <p>Weapons: 1 - knife, 2 - gun, 3 - riffle, 4 - bat, 5 - flame</p>
+      </div>
     </>
   )
 }
