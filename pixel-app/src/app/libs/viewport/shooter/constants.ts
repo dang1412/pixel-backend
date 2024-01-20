@@ -171,6 +171,44 @@ export const manifest: AssetsManifest = {
       }
     },
     {
+      name: 'man-idle-flame',
+      assets: {
+        'man_idle_flame_0': '/pixel_shooter/idle_firethrower/idle_firethrower_000.png',
+        'man_idle_flame_1': '/pixel_shooter/idle_firethrower/idle_firethrower_001.png',
+        'man_idle_flame_2': '/pixel_shooter/idle_firethrower/idle_firethrower_002.png',
+        'man_idle_flame_3': '/pixel_shooter/idle_firethrower/idle_firethrower_003.png',
+        'man_idle_flame_4': '/pixel_shooter/idle_firethrower/idle_firethrower_004.png',
+        'man_idle_flame_5': '/pixel_shooter/idle_firethrower/idle_firethrower_005.png',
+        'man_idle_flame_6': '/pixel_shooter/idle_firethrower/idle_firethrower_006.png',
+        'man_idle_flame_7': '/pixel_shooter/idle_firethrower/idle_firethrower_007.png',
+      }
+    },
+    {
+      name: 'man-walk-flame',
+      assets: {
+        'man_walk_flame_0': '/pixel_shooter/walk_firethrower/walk_firethrower_000.png',
+        'man_walk_flame_1': '/pixel_shooter/walk_firethrower/walk_firethrower_001.png',
+        'man_walk_flame_2': '/pixel_shooter/walk_firethrower/walk_firethrower_002.png',
+        'man_walk_flame_3': '/pixel_shooter/walk_firethrower/walk_firethrower_003.png',
+        'man_walk_flame_4': '/pixel_shooter/walk_firethrower/walk_firethrower_004.png',
+        'man_walk_flame_5': '/pixel_shooter/walk_firethrower/walk_firethrower_005.png',
+      }
+    },
+    {
+      name: 'man-hit-flame',
+      assets: {
+        'man_hit_flame_0': '/pixel_shooter/flamethrower/flamethrower_000.png',
+        'man_hit_flame_1': '/pixel_shooter/flamethrower/flamethrower_001.png',
+        'man_hit_flame_2': '/pixel_shooter/flamethrower/flamethrower_002.png',
+        'man_hit_flame_3': '/pixel_shooter/flamethrower/flamethrower_003.png',
+        'man_hit_flame_4': '/pixel_shooter/flamethrower/flamethrower_004.png',
+        'man_hit_flame_5': '/pixel_shooter/flamethrower/flamethrower_005.png',
+        'man_hit_flame_6': '/pixel_shooter/flamethrower/flamethrower_006.png',
+        'man_hit_flame_7': '/pixel_shooter/flamethrower/flamethrower_007.png',
+        'man_hit_flame_8': '/pixel_shooter/flamethrower/flamethrower_008.png',
+      }
+    },
+    {
       name: 'sample',
       assets: {
 

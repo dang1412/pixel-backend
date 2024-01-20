@@ -1,9 +1,57 @@
 
-const WORLD_WIDTH = 10000
-const WORLD_HEIGHT = 10000
+// const WORLD_WIDTH = 10000
+// const WORLD_HEIGHT = 10000
+
+import { getPixelIndex } from '../utils'
+import { WORLD_HEIGHT, WORLD_WIDTH } from '../utils/constants'
+import { CharacterAttrs } from './types'
 
 function angleEqual(angle: number, i: number): boolean {
   return Math.round(angle * 100) === Math.round(i * Math.PI * 100)
+}
+
+// tan(angle) = dy / dx
+function distanceToVerticalX(x: number, y: number, angle: number, x1: number): number {
+  const y1 = y + Math.tan(angle) * (x1 - x)
+
+  return Math.abs(x1 - x) + Math.abs(y1 - y)
+}
+
+function distanceToHorizontalY(x: number, y: number, angle: number, y1: number): number {
+  const x1 = x + (y1 - y) / Math.tan(angle)
+
+  return Math.abs(x1 - x) + Math.abs(y1 - y)
+}
+
+export function proceedShootLinePixels(x: number, y: number, angle: number, proceedPixel: (px: number, py: number) => boolean) {
+  // find direction of x, y: 1, 0, -1
+  const dirx = angleEqual(angle, 0.5) || angleEqual(angle, -0.5) ? 0: (angle > - Math.PI/2 && angle < Math.PI/2) ? 1 : -1
+  const diry = angleEqual(angle, 0) || angleEqual(angle, 1) || angleEqual(angle, -1) ? 0 : angle > 0 ? 1 : -1
+
+  let px = Math.floor(x)  // pixel x
+  let py = Math.floor(y)  // pixel y
+
+  // vertical X, horizontal Y
+  let vx = dirx <= 0 ? px : px + 1
+  let hy = diry <= 0 ? py : py + 1
+
+  // distance to the next vertical line, horizon line
+  let dvx = dirx !== 0 ? distanceToVerticalX(x, y, angle, vx) : Infinity
+  let dhy = diry !== 0 ? distanceToHorizontalY(x, y, angle, hy) : Infinity
+
+  while (vx >= 0 && vx <= WORLD_WIDTH && hy >= 0 && hy <= WORLD_HEIGHT) {
+    const iscontinue = proceedPixel(px, py)
+    if (!iscontinue) break
+    if (dvx <= dhy) {
+      px += dirx
+      vx += dirx
+      dvx = distanceToVerticalX(x, y, angle, vx)
+    } else {
+      py += diry
+      hy += diry
+      dhy = distanceToHorizontalY(x, y, angle, hy)
+    }
+  }
 }
 
 /**
@@ -65,9 +113,7 @@ function intersect(x1: number, y1: number, x2: number, y2: number, x3: number, y
   return [x, y]
 }
 
-function shootHitObject(x: number, y: number, angle: number, obj: [number, number, number, number]): [number, number, number] | null {
-  const [bx, by] = findBoundaryIntersectPoint(x, y, angle)
-
+function shootHitObject(x: number, y: number, bx: number, by: number, obj: [number, number, number, number]): [number, number, number] | null {
   const [ox1, oy1, w, h] = obj
   const [ox2, oy2] = [ox1 + w, oy1 + h]
 
@@ -104,17 +150,42 @@ function shootHitObject(x: number, y: number, angle: number, obj: [number, numbe
  * @param objs [id, x, y, w, h][]
  * @returns [id, x, y] of the first hit
  */
-export function shootFirstHitObject(x: number, y: number, angle: number, objs: [number, number, number, number, number][]): [number, number, number] | null {
-  let firstHit: [number, number, number] | null = null
-  let distance = 0
-  for (const obj of objs) {
-    const hitP = shootHitObject(x, y, angle, obj.slice(1) as [number, number, number, number])
-    if (hitP && (!firstHit || distance > hitP[2])) {
-      // [index, x, y]
-      firstHit = [obj[0], hitP[0], hitP[1]]
-      distance = hitP[2]
+export function shootFirstHitObject(
+  id: number,
+  angle: number,
+  positionCharactersMap: {[id: number]: number[]},
+  characterAttrsMap: {[id: number]: CharacterAttrs},
+  buildingBlocks: {[id: number]: boolean},
+): [number, number, number] | null {
+  const attrs = characterAttrsMap[id]
+  if (!attrs) return null
+
+  const [x, y] = [attrs.x / 100, attrs.y / 100]
+  const [bx, by] = findBoundaryIntersectPoint(x, y, angle)
+  let firstHit: [number, number, number] = [0, bx, by]
+  let distance = Infinity
+  proceedShootLinePixels(x, y, angle, (px, py) => {
+    const pixel = getPixelIndex(px, py, WORLD_WIDTH)
+
+    const shooterIds = positionCharactersMap[pixel] || []
+    let objs = buildingBlocks[pixel] ? [[0, px, py, 1, 1]]
+      : shooterIds.map(_id => _id !== id && characterAttrsMap[_id] ? [_id, (characterAttrsMap[_id].x - 50)/100, (characterAttrsMap[_id].y - 50)/100, 1, 1] : null)
+
+    for (const obj of objs) if (obj) {
+      const hitP = shootHitObject(x, y, bx, by, obj.slice(1) as [number, number, number, number])
+      if (hitP && distance > hitP[2]) {
+        // [id, x, y]
+        firstHit = [obj[0], hitP[0], hitP[1]]
+        distance = hitP[2]
+        // found the hit, stop the shoot line
+        return false
+      } else {
+
+      }
     }
-  }
+
+    return true
+  })
 
   return firstHit
 }

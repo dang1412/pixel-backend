@@ -93,7 +93,6 @@ export class EngineViewport {
       backgroundColor: 0xffffff
     })
 
-
     const viewport = this.viewport = new Viewport({
       screenWidth: this.screenWidth,
       screenHeight: this.screenHeight,

@@ -1,4 +1,4 @@
-import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters, cleanupDeadChars } from 'adventure_engine/dist/shooting'
+import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters, cleanupDeadChars, initGameState } from 'adventure_engine/dist/shooting'
 // import { TextDecoder, TextEncoder } from '../encode'
 
 interface MatchState {
@@ -15,10 +15,7 @@ function matchInit(
   logger.debug('PixelShooter match created')
 
   const presences: {[userId: string]: nkruntime.Presence} = {}
-  const game: ShootingGameState = {
-    characterAttrsMap: {},
-    characterCtrlMap: {}
-  }
+  const game = initGameState()
 
   return {
       state: { presences, game },
@@ -117,7 +114,7 @@ function matchLoop(
   cleanupDeadChars(state.game)
 
   // update match states and get changes
-  const [updatedCtrls, movedIds] = proceedControls(state.game, ctrls, 25)
+  const [updatedCtrls, movedIds] = proceedControls(state.game, ctrls, 25, logger)
 
   // proceed game loop
   const updatedIds = [...movedIds,...newIds]
