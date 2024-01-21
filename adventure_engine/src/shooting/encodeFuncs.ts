@@ -1,4 +1,4 @@
-import { CharacterAttrs, CharacterControl } from './types'
+import { CharType, CharacterAttrs, CharacterControl } from './types'
 
 export function encodeControls(characterControls: CharacterControl[]): ArrayBuffer {
   const buffer = new ArrayBuffer(3 * characterControls.length + 1) // 3 bytes = 24 bits
@@ -101,4 +101,40 @@ export function getOpcode(buffer: ArrayBuffer): number {
   const opcode = view.getUint8(0)
 
   return opcode
+}
+
+/**
+ * 
+ * @param types [id, type]
+ */
+export function encodeCharacterTypes(types: [number, CharType][]): ArrayBuffer {
+  // first byte is opcode
+  // 2 bytes each
+  const buffer = new ArrayBuffer(2 * types.length + 1) 
+  const view = new DataView(buffer)
+
+  // first byte is opcode 2
+  view.setUint8(0, 2)
+
+  for (let i = 0; i < types.length; i++) {
+    const type = types[i]
+    view.setUint8(2 * i + 1, type[0])
+    view.setUint8(2 * i + 2, type[1])
+  }
+
+  return buffer
+}
+
+export function decodeCharacterTypes(buffer: ArrayBuffer): [number, CharType][] {
+  const view = new DataView(buffer)
+  const len = (buffer.byteLength - 1) / 2
+
+  const types: [number, CharType][] = []
+  for (let i = 0; i < len; i++) {
+    const id = view.getUint8(2 * i + 1)
+    const type = view.getUint8(2 * i + 2)
+    types.push([id, type as CharType])
+  }
+
+  return types
 }

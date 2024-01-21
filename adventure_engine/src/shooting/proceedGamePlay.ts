@@ -1,7 +1,7 @@
 import { WORLD_HEIGHT, WORLD_WIDTH } from '../utils'
 import { shootFirstHitObject } from './calculateShoot'
-import { encodeAttrsArray } from './encodeFuncs'
-import { CharacterAttrs, CharacterControl, ShootingGameState, defaultCharacterAttrs, defaultCharacterControl } from './types'
+import { encodeAttrsArray, encodeCharacterTypes } from './encodeFuncs'
+import { CharType, CharacterAttrs, CharacterControl, ShootingGameState, defaultCharacterAttrs, defaultCharacterControl } from './types'
 import { findUniqueElements, shooterOnPixels } from './utils'
 
 const characterSpeed = 60
@@ -34,7 +34,10 @@ export function cleanupDeadChars(state: ShootingGameState) {
 
 export function proceedControls(state: ShootingGameState, ctrls: CharacterControl[], speed?: number, logger?: any): [CharacterControl[], number[]] {
   const idCtrlMap: {[id: number]: CharacterControl} = {}
-  
+
+  const zombieCtrls = generateZombieCtrls(state)
+  ctrls = ctrls.concat(zombieCtrls)
+
   // aggregate ctrls to execute fires, maximum 1 fire per character
   for (const ctrl of ctrls) {
     const id = ctrl.id
@@ -79,7 +82,11 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
     const attrs = state.characterAttrsMap[id]
     if (attrs) {
       const moved = proceedMoveByCtrl(attrs, ctrl, state.positionCharactersMap, state.buildingBlocks, speed)
-      if (moved) idSet.add(id)
+      if (moved) {
+        idSet.add(id)
+        // remember latest control
+        state.characterCtrlMap[id] = ctrl
+      }
     }
   }
 
@@ -228,13 +235,14 @@ export function addToPixels(positionCharactersMap: {[id: number]: number[]}, id:
   }
 }
 
-export function addShooter(state: ShootingGameState, x: number, y: number): CharacterAttrs {
+export function addShooter(state: ShootingGameState, x: number, y: number, type = CharType.man): CharacterAttrs {
   let id = 1
   while (state.characterAttrsMap[id]) id++
 
   const attrs: CharacterAttrs = { id, hp: 100, x, y }
   state.characterAttrsMap[id] = attrs
   state.characterCtrlMap[id] = Object.assign({}, defaultCharacterControl, { id })
+  state.characterTypes[id] = type
 
   // add to new pixels
   const newPixels = shooterOnPixels(attrs)
@@ -254,4 +262,53 @@ function getAttrsArr(state: ShootingGameState, ids: number[]): CharacterAttrs[] 
   const attrsArr = ids.map(id => state.characterAttrsMap[id]).filter(attrs => attrs)
 
   return attrsArr
+}
+
+export function encodeShooterTypes(state: ShootingGameState, ids?: number[]): ArrayBuffer {
+  ids = ids || Object.keys(state.characterAttrsMap).map(i => Number(i))
+  const types: [number, CharType][] = ids.map(id => [id, state.characterTypes[id] as CharType])
+
+  const data = encodeCharacterTypes(types)
+
+  return data
+}
+
+export function generateZombieCtrls(state: ShootingGameState): CharacterControl[] {
+  const ctrls: CharacterControl[] = []
+  const ids = Object.keys(state.characterAttrsMap).map(i => Number(i))
+  for (const id of ids) if (state.characterTypes[id] > 1) {
+    const ctrl = Object.assign({}, defaultCharacterControl)
+    ctrl.id = id
+    const act = Math.floor(Math.random() * 20)
+    switch (act) {
+      case 0:
+        ctrl.up = true
+        ctrl.angle = Math.PI * 100
+        break
+      case 1:
+        ctrl.down = true
+        ctrl.angle = 0
+        break
+      case 2:
+        ctrl.left = true
+        ctrl.angle = Math.PI * 50
+        break
+      case 3:
+        ctrl.right = true
+        ctrl.angle = Math.PI * 150
+        break
+      case 4:
+        ctrl.fire = true
+        ctrl.angle = state.characterCtrlMap[id].angle
+        break
+      default:
+        Object.assign(ctrl, state.characterCtrlMap[id])
+        ctrl.fire = false
+        break
+    }
+
+    ctrls.push(ctrl)
+  }
+
+  return ctrls
 }

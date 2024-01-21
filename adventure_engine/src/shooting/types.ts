@@ -40,9 +40,20 @@ export const defaultCharacterControl: CharacterControl = {
   id: 0
 }
 
+export enum CharType {
+  man = 0,
+  woman = 1,
+  zombie1 = 2,
+  zombie2 = 3,
+  zombie3 = 4,
+  zombie4 = 5,
+}
+
 export interface ShootingGameState {
   characterAttrsMap: {[id: number]: CharacterAttrs}
   characterCtrlMap: {[id: number]: CharacterControl}
+
+  characterTypes: {[id: number]: CharType}
 
   // 1 pixel can hold more than 1 shooter
   positionCharactersMap: {[id: number]: number[]}
