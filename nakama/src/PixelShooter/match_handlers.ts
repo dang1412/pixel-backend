@@ -1,4 +1,4 @@
-import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters, cleanupDeadChars, initGameState } from 'adventure_engine/dist/shooting'
+import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters, cleanupDeadChars, initGameState, encodeShooterTypes } from 'adventure_engine/dist/shooting'
 // import { TextDecoder, TextEncoder } from '../encode'
 
 interface MatchState {
@@ -18,9 +18,9 @@ function matchInit(
   const game = initGameState()
 
   return {
-      state: { presences, game },
-      tickRate: 5,
-      label: 'PixelShooter'
+    state: { presences, game },
+    tickRate: 5,
+    label: 'PixelShooter'
   }
 }
 
@@ -37,8 +37,8 @@ function matchJoinAttempt(
   logger.debug('%q attempted to join Shooter match', ctx.userId)
 
   return {
-      state,
-      accept: true
+    state,
+    accept: true
   }
 }
 
@@ -56,7 +56,11 @@ function matchJoin(
     logger.info('%q joined Shooter match', presence.userId)
   })
 
-  // get current game state
+  // types
+  const typesData = encodeShooterTypes(state.game)
+  dispatcher.broadcastMessage(2, typesData, presences)
+
+  // get current position
   const data = encodeAllShooters(state.game)
   dispatcher.broadcastMessage(0, data, presences)
 
@@ -101,7 +105,7 @@ function matchLoop(
       // add new shooter
       const decoded = decodeAttrsArray(m.data)[0]
       logger.info('Received new shooter %v', decoded)
-      const attrs = addShooter(state.game, decoded.x, decoded.y)
+      const attrs = addShooter(state.game, decoded.x, decoded.y, decoded.id)  // id here is used as type
       newIds.push(attrs.id)
     } else if (m.opCode === 1) {
       // control
@@ -119,10 +123,16 @@ function matchLoop(
   // proceed game loop
   const updatedIds = [...movedIds,...newIds]
 
+  if (newIds.length) {
+    logger.info('New chars %v', newIds)
+    const data = encodeShooterTypes(state.game, newIds)
+    dispatcher.broadcastMessage(2, data)
+  }
+
   if (updatedCtrls.length) {
     logger.info('updatedCtrls %v', updatedCtrls)
     const data = encodeControls(updatedCtrls)
-    dispatcher.broadcastMessage(1, data)
+    dispatcher.broadcastMessage(1, data) 
   }
 
   if (updatedIds.length) {

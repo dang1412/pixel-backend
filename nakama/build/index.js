@@ -128,6 +128,17 @@ function decodeAttrsArray(buffer) {
   }
   return attrsArr;
 }
+function encodeCharacterTypes(types) {
+  var buffer = new ArrayBuffer(2 * types.length + 1);
+  var view = new DataView(buffer);
+  view.setUint8(0, 2);
+  for (var i = 0; i < types.length; i++) {
+    var type = types[i];
+    view.setUint8(2 * i + 1, type[0]);
+    view.setUint8(2 * i + 2, type[1]);
+  }
+  return buffer;
+}
 
 function getPixelIndex(x, y, w) {
   return y * w + x;
@@ -286,6 +297,15 @@ var defaultCharacterControl = {
   angle: 0,
   id: 0
 };
+var CharType;
+(function (CharType) {
+  CharType[CharType["man"] = 0] = "man";
+  CharType[CharType["woman"] = 1] = "woman";
+  CharType[CharType["zombie1"] = 2] = "zombie1";
+  CharType[CharType["zombie2"] = 3] = "zombie2";
+  CharType[CharType["zombie3"] = 4] = "zombie3";
+  CharType[CharType["zombie4"] = 5] = "zombie4";
+})(CharType || (CharType = {}));
 
 function getShooterArea(shooter) {
   return {
@@ -344,6 +364,8 @@ function cleanupDeadChars(state) {
 }
 function proceedControls(state, ctrls, speed, logger) {
   var idCtrlMap = {};
+  var zombieCtrls = generateZombieCtrls(state);
+  ctrls = ctrls.concat(zombieCtrls);
   for (var _i = 0, ctrls_1 = ctrls; _i < ctrls_1.length; _i++) {
     var ctrl = ctrls_1[_i];
     var id = ctrl.id;
@@ -381,7 +403,10 @@ function proceedControls(state, ctrls, speed, logger) {
     var attrs = state.characterAttrsMap[id];
     if (attrs) {
       var moved = proceedMoveByCtrl(attrs, ctrl, state.positionCharactersMap, state.buildingBlocks, speed);
-      if (moved) idSet.add(id);
+      if (moved) {
+        idSet.add(id);
+        state.characterCtrlMap[id] = ctrl;
+      }
     }
   }
   return [updatedCtrls, Array.from(idSet)];
@@ -474,7 +499,10 @@ function addToPixels(positionCharactersMap, id, pixels) {
     if (!positionCharactersMap[pixel]) positionCharactersMap[pixel] = [id];else positionCharactersMap[pixel].push(id);
   }
 }
-function addShooter(state, x, y) {
+function addShooter(state, x, y, type) {
+  if (type === void 0) {
+    type = CharType.man;
+  }
   var id = 1;
   while (state.characterAttrsMap[id]) id++;
   var attrs = {
@@ -487,6 +515,7 @@ function addShooter(state, x, y) {
   state.characterCtrlMap[id] = Object.assign({}, defaultCharacterControl, {
     id: id
   });
+  state.characterTypes[id] = type;
   var newPixels = shooterOnPixels(attrs);
   addToPixels(state.positionCharactersMap, attrs.id, newPixels);
   return attrs;
@@ -503,6 +532,58 @@ function getAttrsArr(state, ids) {
     return attrs;
   });
   return attrsArr;
+}
+function encodeShooterTypes(state, ids) {
+  ids = ids || Object.keys(state.characterAttrsMap).map(function (i) {
+    return Number(i);
+  });
+  var types = ids.map(function (id) {
+    return [id, state.characterTypes[id]];
+  });
+  var data = encodeCharacterTypes(types);
+  return data;
+}
+function generateZombieCtrls(state) {
+  var ctrls = [];
+  var ids = Object.keys(state.characterAttrsMap).map(function (i) {
+    return Number(i);
+  });
+  for (var _i = 0, ids_2 = ids; _i < ids_2.length; _i++) {
+    var id = ids_2[_i];
+    if (state.characterTypes[id] > 1) {
+      var ctrl = Object.assign({}, defaultCharacterControl);
+      ctrl.id = id;
+      var act = Math.floor(Math.random() * 20);
+      switch (act) {
+        case 0:
+          ctrl.up = true;
+          ctrl.angle = Math.PI * 100;
+          break;
+        case 1:
+          ctrl.down = true;
+          ctrl.angle = 0;
+          break;
+        case 2:
+          ctrl.left = true;
+          ctrl.angle = Math.PI * 50;
+          break;
+        case 3:
+          ctrl.right = true;
+          ctrl.angle = Math.PI * 150;
+          break;
+        case 4:
+          ctrl.fire = true;
+          ctrl.angle = state.characterCtrlMap[id].angle;
+          break;
+        default:
+          Object.assign(ctrl, state.characterCtrlMap[id]);
+          ctrl.fire = false;
+          break;
+      }
+      ctrls.push(ctrl);
+    }
+  }
+  return ctrls;
 }
 
 var areas = [{
@@ -559,6 +640,7 @@ function initGameState() {
   return {
     characterAttrsMap: {},
     characterCtrlMap: {},
+    characterTypes: {},
     positionCharactersMap: {},
     buildingBlocks: buildingBlocks
   };
@@ -589,6 +671,8 @@ function matchJoin$1(ctx, logger, nk, dispatcher, tick, state, presences) {
     state.presences[presence.userId] = presence;
     logger.info('%q joined Shooter match', presence.userId);
   });
+  var typesData = encodeShooterTypes(state.game);
+  dispatcher.broadcastMessage(2, typesData, presences);
   var data = encodeAllShooters(state.game);
   dispatcher.broadcastMessage(0, data, presences);
   return {
@@ -611,7 +695,7 @@ function matchLoop$1(ctx, logger, nk, dispatcher, tick, state, messages) {
     if (m.opCode === 0) {
       var decoded = decodeAttrsArray(m.data)[0];
       logger.info('Received new shooter %v', decoded);
-      var attrs = addShooter(state.game, decoded.x, decoded.y);
+      var attrs = addShooter(state.game, decoded.x, decoded.y, decoded.id);
       newIds.push(attrs.id);
     } else if (m.opCode === 1) {
       var ctrl = decodeControls(m.data)[0];
@@ -624,6 +708,11 @@ function matchLoop$1(ctx, logger, nk, dispatcher, tick, state, messages) {
     updatedCtrls = _a[0],
     movedIds = _a[1];
   var updatedIds = __spreadArray(__spreadArray([], movedIds, true), newIds, true);
+  if (newIds.length) {
+    logger.info('New chars %v', newIds);
+    var data = encodeShooterTypes(state.game, newIds);
+    dispatcher.broadcastMessage(2, data);
+  }
   if (updatedCtrls.length) {
     logger.info('updatedCtrls %v', updatedCtrls);
     var data = encodeControls(updatedCtrls);

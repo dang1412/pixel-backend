@@ -19,9 +19,9 @@ function matchInit(
   const adventure = AdventureEngine.initState()
 
   return {
-      state: { presences, adventure },
-      tickRate: 1,
-      label: 'PixelAdventure'
+    state: { presences, adventure },
+    tickRate: 1,
+    label: 'PixelAdventure'
   }
 }
 
