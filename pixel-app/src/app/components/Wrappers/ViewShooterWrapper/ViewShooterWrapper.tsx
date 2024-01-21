@@ -47,15 +47,21 @@ export function ViewShooterWrapper() {
       game.updateMatch(attrsArr)
     }
 
+    //
+    service.handleNewChars = async (types) => {
+      console.log('News types', types)
+      game.updateTypes(types)
+    }
+
     await service.joinMatch()
 
     game.requestCtrl = (ctrl) => {
       console.log('requestCtrl', ctrl)
       service.requestCtrl(1, ctrl)
     }
-    game.requestAddShooter = (x, y) => {
+    game.requestAddShooter = (type, x, y) => {
       console.log('requestAddShooter', x, y)
-      service.requestAddShooter(x, y)
+      service.requestAddShooter(type, x, y)
     }
 
     updateLoading(-1)

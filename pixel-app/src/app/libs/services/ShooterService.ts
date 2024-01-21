@@ -1,6 +1,6 @@
 import { Client, Session, Socket } from '@heroiclabs/nakama-js'
 import { v4 as uuidv4 } from 'uuid'
-import { CharacterControl, encodeControls, decodeControls, encodeAttrsArray, CharacterAttrs, decodeAttrsArray, getOpcode } from 'adventure_engine/dist/shooting'
+import { CharacterControl, encodeControls, decodeControls, encodeAttrsArray, CharacterAttrs, decodeAttrsArray, getOpcode, decodeCharacterTypes, CharType } from 'adventure_engine/dist/shooting'
 
 export class ShooterService {
   
@@ -10,6 +10,7 @@ export class ShooterService {
 
   handleMatchUpdates?: (attrsArr: CharacterAttrs[]) => void
   handleMatchUpdatedCtrls?: (updatedCtrls: CharacterControl[]) => void
+  handleNewChars?: (types: [number, CharType][]) => void
 
   constructor(public client: Client, ssl: boolean) {
     this.socket = client.createSocket(ssl)
@@ -26,6 +27,11 @@ export class ShooterService {
         const ctrls = decodeControls(data.buffer)
         if (this.handleMatchUpdatedCtrls) {
           this.handleMatchUpdatedCtrls(ctrls)
+        }
+      } else if (opcode === 2) {
+        const types = decodeCharacterTypes(data.buffer)
+        if (this.handleNewChars) {
+          this.handleNewChars(types)
         }
       }
     }
@@ -61,10 +67,10 @@ export class ShooterService {
   }
 
   // add shooter - opcode 0
-  async requestAddShooter(x: number, y: number): Promise<string> {
+  async requestAddShooter(type: number, x: number, y: number): Promise<string> {
     if (!this.socket || !this.matchId) return 'no socket'
 
-    const data = encodeAttrsArray([{id: 0, hp: 0, x, y}]) // only use x, y info here
+    const data = encodeAttrsArray([{id: type, hp: 0, x, y}]) // not use id, so id is used for type, x, y info
     await this.socket.sendMatchState(this.matchId, 0, new Uint8Array(data))
 
     return ''

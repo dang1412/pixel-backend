@@ -1,11 +1,12 @@
 import { Assets } from 'pixi.js'
 
-import { CharacterAttrs, CharacterControl, addToPixels, ctrlEqual, defaultCharacterAttrs, initGameState, proceedMoveByCtrl, removeShooter, setMove, shootFirstHitObject, shooterOnPixels } from 'adventure_engine/dist/shooting'
+import { CharType, CharacterAttrs, CharacterControl, addToPixels, ctrlEqual, defaultCharacterAttrs, initGameState, proceedMoveByCtrl, removeShooter, setMove, shootFirstHitObject, shooterOnPixels } from 'adventure_engine/dist/shooting'
 
 import { PixelMap } from '../PixelMap'
 import { Shooter } from './Shooter'
 import { gunhitState, manifest } from './constants'
 import { AnimatedSprite } from './AnimatedSprite'
+import { typeToLevelIndex } from './utils'
 
 export class PixelShooter {
 
@@ -14,8 +15,12 @@ export class PixelShooter {
 
   private lastCtrl: CharacterControl | undefined
   // [id, x, y, w, h][]
+
   characterAttrsMap: {[id: number]: CharacterAttrs} = {}
+  characterTypes: {[id: number]: CharType} = {}
   positionCharactersMap: {[id: number]: number[]} = {}
+
+
   buildingBlocks: {[id: number]: boolean}
 
   stopGame = () => {}
@@ -47,7 +52,7 @@ export class PixelShooter {
 
   async load() {
     Assets.init({ manifest })
-    await Assets.loadBundle([
+    const bundles: string[] = [
       'man-idle-knife',
       'man-walk-knife',
       'man-hit-knife',
@@ -64,10 +69,24 @@ export class PixelShooter {
       'man-walk-flame',
       'man-hit-flame',
       'gunhit',
-      'man-dead',
-    ])
+      'man-death',
+    ]
     Assets.add({alias: 'shooter_select', src: '/pixel_shooter/circle.png'})
     await Assets.load('shooter_select')
+
+    // load zombies
+    for (let l = 1; l <= 1; l++) {
+      for (let i = 1; i <= 4; i++) {
+        for (let act of ['attack', 'death', 'walk']) {
+          bundles.push(`zombie-lvl${l}-${i}-${act}`)
+        }
+      }
+    }
+
+    console.log('bundles', bundles)
+
+    // load all
+    await Assets.loadBundle(bundles)
 
     console.log('Done loading')
 
@@ -79,13 +98,26 @@ export class PixelShooter {
       }
     }
 
-    const ondropman = (px: number, py: number) => {
-      // request onMatch new shooter
-      this.requestAddShooter(px * 100, py * 100)
+    const ondropman = (data: DataTransfer | null, px: number, py: number, x: number, y: number) => {
+      const type = Number(data?.getData('type')) || 0
+      if (type > 1) {
+        // zombie
+        // test
+        // const l = Number(data?.getData('l')) || 0
+        // const i = Number(data?.getData('i')) || 0
+        // const shooter = this.addShooter(99, {id: 99, hp: 100, x: px * 100, y: py * 100}, l, i)
+        // if (shooter) {
+        //   shooter.setLatestServer(px * 100, py * 100)
+        // }
+      } else {
+        // human
+      }
+      // request new shooter
+      this.requestAddShooter(type, px * 100, py * 100)
     }
 
     this.map.engine.on('mousemove', onmousemove)
-    this.map.engine.on('dropman', ondropman)
+    this.map.engine.on('drop', ondropman)
 
     // key pressed
     let lastFireTime = 0
@@ -121,7 +153,7 @@ export class PixelShooter {
         // }
         shooter.ctrl.fire = true
       }
-      
+
       console.log('keydown', e.key)
     }
 
@@ -185,15 +217,26 @@ export class PixelShooter {
     }
   }
 
-  addShooter(id: number, attrs?: CharacterAttrs) {
+  addShooter(id: number, attrs?: CharacterAttrs, type = 0): Shooter | undefined {
     if (!this.idCharacterMap[id]) {
-      const shooter = new Shooter(this, id, {...defaultCharacterAttrs, ...attrs})
+      const [l, i] = typeToLevelIndex(type)
+      console.log('addShooter', id, type, l, i)
+      const shooter = new Shooter(this, id, {...defaultCharacterAttrs, ...attrs}, l, i)
       this.idCharacterMap[id] = shooter
       this.characterAttrsMap[id] = shooter.attrs
 
       // add to new pixels
       const onPixels = shooterOnPixels(shooter.attrs)
       addToPixels(this.positionCharactersMap, id, onPixels)
+
+      return shooter
+    }
+  }
+
+  updateTypes(types: [number, CharType][]) {
+    for (const type of types) {
+      const [id, t] = type
+      this.characterTypes[id] = t
     }
   }
 
@@ -244,7 +287,7 @@ export class PixelShooter {
     for (const attrs of attrsArr) {
       const id = attrs.id
       if (id >= 0 && attrs) {
-        this.addShooter(id, attrs)
+        this.addShooter(id, attrs, this.characterTypes[id] || 0)
 
         const shooter = this.idCharacterMap[id]
         // latest server values, for being controlled character to update when stop moving
@@ -276,5 +319,5 @@ export class PixelShooter {
   }
 
   requestCtrl(ctrl: CharacterControl) {}
-  requestAddShooter(x: number, y: number) {}
+  requestAddShooter(type: number, x: number, y: number) {}
 }

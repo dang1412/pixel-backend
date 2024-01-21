@@ -13,8 +13,8 @@ export class AnimatedSprite {
   private switchingOnce = false
   private started = false
 
-  constructor(public states: {[state: string]: string[]}) {
-    this.curState = Object.keys(states)[0]
+  constructor(public states: {[state: string]: string[]}, state = '') {
+    this.curState = state || Object.keys(states)[0]
     this.sprite.texture = Texture.from(states[this.curState][0])
     this.sprite.anchor.set(0.5, 0.5)
   }

@@ -34,7 +34,11 @@ export const ViewShooter: React.FC<Props> = (props) => {
   }, [])
 
   const dragMan = useCallback((e: React.DragEvent<HTMLImageElement>) => {
-    e.dataTransfer.setData('type', `man`)
+    e.dataTransfer.setData('type', `0`)
+  }, [])
+
+  const dragZombie = useCallback((e: React.DragEvent<HTMLImageElement>, type: number) => {
+    e.dataTransfer.setData('type', `${type}`)
   }, [])
 
   return (
@@ -48,7 +52,13 @@ export const ViewShooter: React.FC<Props> = (props) => {
         getDisplayFloat={getFloatDialog}
         allowToggleMode={false}
       />
-      <img className='inline-block' id={`man-shooter`} src='/pixel_shooter/man_icon_no_bg.png' onDragStart={(e) => dragMan(e)} width="100" height="100" />
+      <div>
+        <img className='inline-block' id={`man-shooter`} src='/pixel_shooter/man_icon_no_bg.png' onDragStart={(e) => dragMan(e)} width="100" height="100" />
+        <img className='inline-block' id={`zombie-1-1`} src='/pixel_shooter/zombies/zombie.png' onDragStart={(e) => dragZombie(e, 2)} width="100" height="100" />
+        <img className='inline-block' id={`zombie-1-1`} src='/pixel_shooter/zombies/zombie.png' onDragStart={(e) => dragZombie(e, 3)} width="100" height="100" />
+        <img className='inline-block' id={`zombie-1-1`} src='/pixel_shooter/zombies/zombie.png' onDragStart={(e) => dragZombie(e, 4)} width="100" height="100" />
+        <img className='inline-block' id={`zombie-1-1`} src='/pixel_shooter/zombies/zombie.png' onDragStart={(e) => dragZombie(e, 5)} width="100" height="100" />
+      </div>
       <div>
         <p>Click on shooter to control</p>
         <p>A W S D to move, f to fire</p>

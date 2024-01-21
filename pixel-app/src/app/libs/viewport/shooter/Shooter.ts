@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js'
 
 import { AnimatedSprite } from './AnimatedSprite'
-import { characterStates } from './constants'
+import { characterStates, getZombieStates } from './constants'
 import { CharacterAttrs, CharacterControl } from 'adventure_engine/dist/shooting'
 import { PixelShooter } from '.'
 
@@ -12,8 +12,9 @@ export class Shooter {
   container = new Container()
   keysPressed: { [key: string]: boolean } = {}
   speed = 4
+  attackSpeed = 0.04
   // weapon: 'knife' | 'gun' | 'riffle' | 'bat' = 'riffle'
-  gender = 'man'
+  type = 'man'
 
   char: AnimatedSprite
 
@@ -36,8 +37,19 @@ export class Shooter {
 
   private tick = () => {}
 
-  constructor(public game: PixelShooter, public id: number, public attrs: CharacterAttrs) {
-    this.char = new AnimatedSprite(characterStates)
+  constructor(public game: PixelShooter, public id: number, public attrs: CharacterAttrs, private l = 0, private i = 0) {
+    if (l === 0) {
+      // man
+      this.char = new AnimatedSprite(characterStates)
+    } else {
+      // zombie
+      this.attackSpeed = 0.08
+      this.speed = 2
+      const zombieStates = getZombieStates(l, i)
+      this.char = new AnimatedSprite(zombieStates, this.getActionState('walk'))
+      this.type = `zombie-lvl${l}-${i}`
+    }
+
     this.ctrl = { id, angle: 0, up: false, down: false, left: false, right: false, fire: false, weapon: 1 }
     this.init()
   }
@@ -60,7 +72,8 @@ export class Shooter {
     container.addChild(char.sprite)
     this.curX = this.attrs.x
     this.curY = this.attrs.y
-    scene.setImagePosition(container, this.attrs.x / 100, this.attrs.y / 100, 1.2, 1.2)
+    const size = this.l === 0 ? 1.2 : 1.5
+    scene.setImagePosition(container, this.attrs.x / 100, this.attrs.y / 100, size, size)
 
     char.start()
 
@@ -106,46 +119,46 @@ export class Shooter {
     this.game.map.engine.removeTick(this.tick)
     console.log('Man dead', this.attrs)
     this.char.stop()
-    this.char.switch('man-dead')
+    this.char.switch(this.getActionState('death'))
     this.char.speed = 0.8
     this.char.start(() => {
       this.game.map.scene.getMainContainer().removeChild(this.container)
     })
   }
 
+  private getActionState(action: string): string {
+    switch (action) {
+      case 'attack':
+        return this.l === 0 ? `man-hit-${weapons[this.ctrl.weapon]}` : `zombie-lvl${this.l}-${this.i}-attack`
+      case 'walk':
+        return this.l === 0 ? `man-walk-${weapons[this.ctrl.weapon]}` : `zombie-lvl${this.l}-${this.i}-walk`
+      case 'idle':
+        return this.l === 0 ? `man-idle-${weapons[this.ctrl.weapon]}` : `zombie-lvl${this.l}-${this.i}-walk`
+      case 'death':
+        return this.l === 0 ? `man-death` : `zombie-lvl${this.l}-${this.i}-death`
+    }
+
+    return ''
+  }
+
   private updateByCtrl() {
-    // let moving = this.ctrl.left || this.ctrl.right || this.ctrl.up || this.ctrl.down
-    // if (this.curX === this.attrs.x && this.curY === this.attrs.y) {
-    //   if (this.ctrl.left) {
-    //     this.attrs.x -= this.speed
-    //   }
-    //   if (this.ctrl.up) {
-    //     this.attrs.y -= this.speed
-    //   }
-    //   if (this.ctrl.down) {
-    //     this.attrs.y += this.speed
-    //   }
-    //   if (this.ctrl.right) {
-    //     this.attrs.x += this.speed
-    //   }
-    // } else {
     const moving = this.curX !== this.attrs.x || this.curY !== this.attrs.y || this.ctrl.left || this.ctrl.right || this.ctrl.up || this.ctrl.down
     this.updatePos()
-    // }
 
     if (this.ctrl.fire) {
-      this.char.switchOnce(`man-hit-${weapons[this.ctrl.weapon]}`, 0.04)
+      this.char.switchOnce(this.getActionState('attack'), this.attackSpeed)
       if (!this.selectingCircle.visible) this.ctrl.fire = false
     } else if (moving) {
-      this.char.switch(`man-walk-${weapons[this.ctrl.weapon]}`)
+      this.char.switch(this.getActionState('walk'))
     } else {
-      this.char.switch(`man-idle-${weapons[this.ctrl.weapon]}`)
+      this.char.switch(this.getActionState('idle'))
     }
 
     // rotate
     this.char.sprite.rotation = this.ctrl.angle / 100
   }
 
+  // move toward target
   private updatePos() {
     if (this.curX === this.attrs.x && this.curY === this.attrs.y) return
 

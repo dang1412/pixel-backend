@@ -393,18 +393,20 @@ export class EngineViewport {
 
       const [x, y] = getXY(e)
       const [px, py] = scene.getViewportCoord(x, y)
+      this.emit('drop', e.dataTransfer, px, py, x, y)
 
-      const type = e.dataTransfer?.getData('type')
-      if (type === 'beast' || type === 'item' || type === 'building') {
-        // type 'beast', 'item' or 'building'
-        const id = e.dataTransfer?.getData('id')
-        console.log(`drop ${type}`, id, px, py)
-        if (id) {
-          this.emit(`drop${type}`, Number(id), px, py)
-        }
-      } else {
-        this.emit(`drop${type}`, px, py)
-      }
+      // const type = e.dataTransfer?.getData('type')
+      // console.log('Drop', e.dataTransfer)
+      // if (type === 'beast' || type === 'item' || type === 'building') {
+      //   // type 'beast', 'item' or 'building'
+      //   const id = e.dataTransfer?.getData('id')
+      //   console.log(`drop ${type}`, id, px, py)
+      //   if (id) {
+      //     this.emit(`drop${type}`, Number(id), px, py)
+      //   }
+      // } else {
+      //   this.emit(`drop${type}`, px, py)
+      // }
     })
 
     // prevent click event after dragging
