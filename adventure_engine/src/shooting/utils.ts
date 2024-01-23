@@ -36,3 +36,10 @@ export function findUniqueElements(arr1: number[], arr2: number[]): [number[], n
 
   return [uniqueToSet1, uniqueToSet2]
 }
+
+export function isCollide(o1: PixelArea, o2: PixelArea): boolean {
+  if (o1.x > o2.x + o2.w || o2.x > o1.x + o1.w) return false
+  if (o1.y > o2.y + o2.h || o2.y > o1.y + o1.h) return false
+
+  return true
+}

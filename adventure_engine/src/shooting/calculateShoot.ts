@@ -4,7 +4,7 @@
 
 import { getPixelIndex } from '../utils'
 import { WORLD_HEIGHT, WORLD_WIDTH } from '../utils/constants'
-import { CharacterAttrs } from './types'
+import { ShootingGameState } from './types'
 
 function angleEqual(angle: number, i: number): boolean {
   return Math.round(angle * 100) === Math.round(i * Math.PI * 100)
@@ -151,13 +151,11 @@ function shootHitObject(x: number, y: number, bx: number, by: number, obj: [numb
  * @returns [id, x, y] of the first hit
  */
 export function shootFirstHitObject(
+  state: ShootingGameState,
   id: number,
   angle: number,
-  positionCharactersMap: {[id: number]: number[]},
-  characterAttrsMap: {[id: number]: CharacterAttrs},
-  buildingBlocks: {[id: number]: boolean},
 ): [number, number, number] | null {
-  const attrs = characterAttrsMap[id]
+  const attrs = state.characterAttrsMap[id]
   if (!attrs) return null
 
   const [x, y] = [attrs.x / 100, attrs.y / 100]
@@ -167,9 +165,9 @@ export function shootFirstHitObject(
   proceedShootLinePixels(x, y, angle, (px, py) => {
     const pixel = getPixelIndex(px, py, WORLD_WIDTH)
 
-    const shooterIds = positionCharactersMap[pixel] || []
-    let objs = buildingBlocks[pixel] ? [[0, px, py, 1, 1]]
-      : shooterIds.map(_id => _id !== id && characterAttrsMap[_id] ? [_id, (characterAttrsMap[_id].x - 50)/100, (characterAttrsMap[_id].y - 50)/100, 1, 1] : null)
+    const shooterIds = state.positionCharactersMap[pixel] || []
+    let objs = state.buildingBlocks[pixel] ? [[0, px, py, 1, 1]]
+      : shooterIds.map(_id => _id !== id && state.characterAttrsMap[_id] ? [_id, (state.characterAttrsMap[_id].x - 50)/100, (state.characterAttrsMap[_id].y - 50)/100, 1, 1] : null)
 
     for (const obj of objs) if (obj) {
       const hitP = shootHitObject(x, y, bx, by, obj.slice(1) as [number, number, number, number])

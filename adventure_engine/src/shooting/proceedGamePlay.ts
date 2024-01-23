@@ -2,7 +2,7 @@ import { WORLD_HEIGHT, WORLD_WIDTH } from '../utils'
 import { shootFirstHitObject } from './calculateShoot'
 import { encodeAttrsArray, encodeCharacterTypes } from './encodeFuncs'
 import { CharType, CharacterAttrs, CharacterControl, ShootingGameState, defaultCharacterAttrs, defaultCharacterControl } from './types'
-import { findUniqueElements, shooterOnPixels } from './utils'
+import { findUniqueElements, getShooterArea, isCollide, shooterOnPixels } from './utils'
 
 const characterSpeed = 60
 
@@ -57,7 +57,7 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
     if (ctrl.weapon === 2 || ctrl.weapon === 3) {
       const attrs = state.characterAttrsMap[ctrl.id]
       const angle = ctrl.angle / 100 - 1.5 * Math.PI
-      const hitP = attrs ? shootFirstHitObject(attrs.id, angle, state.positionCharactersMap, state.characterAttrsMap, state.buildingBlocks) : null
+      const hitP = attrs ? shootFirstHitObject(state, attrs.id, angle) : null
       if (hitP) {
         if (logger) {
           logger.info("Hit %v", hitP)
@@ -79,14 +79,11 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
   
   for (const ctrl of ctrls) {
     const id = ctrl.id
-    const attrs = state.characterAttrsMap[id]
-    if (attrs) {
-      const moved = proceedMoveByCtrl(attrs, ctrl, state.positionCharactersMap, state.buildingBlocks, speed)
-      if (moved) {
-        idSet.add(id)
-        // remember latest control
-        state.characterCtrlMap[id] = ctrl
-      }
+    const moved = proceedMoveByCtrl(state, id, ctrl, speed)
+    if (moved) {
+      idSet.add(id)
+      // remember latest control
+      state.characterCtrlMap[id] = ctrl
     }
   }
 
@@ -111,35 +108,40 @@ export function removeShooter(attrs: CharacterAttrs, positionCharactersMap: {[id
  * @returns 
  */
 export function proceedMoveByCtrl(
-  attrs: CharacterAttrs,
+  state: ShootingGameState,
+  id: number,
+  // attrs: CharacterAttrs,
   ctrl: CharacterControl,
-  positionCharactersMap: {[id: number]: number[]},
-  buildingBlocks: {[id: number]: boolean},
+  // positionCharactersMap: {[id: number]: number[]},
+  // buildingBlocks: {[id: number]: boolean},
   speed = characterSpeed
 ): boolean {
+  const attrs = state.characterAttrsMap[id]
+  if (!attrs) return false
+
   let isMove = false
   let [x, y] = [attrs.x, attrs.y]
   // move
   if (ctrl.left) {
-    if (proceedMove(attrs, x - speed, y, positionCharactersMap, buildingBlocks)) {
+    if (proceedMove(state, attrs, x - speed, y)) {
       x -= speed
       isMove = true
     }
   }
   if (ctrl.up) {
-    if (proceedMove(attrs, x, y - speed, positionCharactersMap, buildingBlocks)) {
+    if (proceedMove(state, attrs, x, y - speed)) {
       y -= speed
       isMove = true
     }
   }
   if (ctrl.down) {
-    if (proceedMove(attrs, x, y + speed, positionCharactersMap, buildingBlocks)) {
+    if (proceedMove(state, attrs, x, y + speed)) {
       y += speed
       isMove = true
     }
   }
   if (ctrl.right) {
-    if (proceedMove(attrs, x + speed, y, positionCharactersMap, buildingBlocks)) {
+    if (proceedMove(state, attrs, x + speed, y)) {
       x += speed
       isMove = true
     }
@@ -159,11 +161,12 @@ export function proceedMoveByCtrl(
  * @returns 
  */
 function proceedMove(
+  state: ShootingGameState,
   attrs: CharacterAttrs,
   x: number,
   y: number,
-  positionCharactersMap: {[id: number]: number[]},
-  buildingBlocks: {[id: number]: boolean},
+  // positionCharactersMap: {[id: number]: number[]},
+  // buildingBlocks: {[id: number]: boolean},
 ): boolean {
   // check out of the map
   if (x < 0 || x > WORLD_WIDTH * 100 || y < 0 || y > WORLD_HEIGHT * 100) return false
@@ -172,13 +175,29 @@ function proceedMove(
 
   // check if newPixels are not building block
   for (const pixel of newPixels) {
-    if (buildingBlocks[pixel]) return false
+    if (state.buildingBlocks[pixel]) return false
   }
 
-  // TODO check if collide with other shooters
+  // check if collide with other shooters
+  if (!canMove(state, attrs.id, x, y)) {
+    return false
+  }
 
   // execute move
-  setMove(attrs, x, y, positionCharactersMap)
+  setMove(attrs, x, y, state.positionCharactersMap)
+
+  return true
+}
+
+function canMove(state: ShootingGameState, id: number, x: number, y: number): boolean {
+  const shooterArea = getShooterArea({id, hp: 0, x, y})
+  const movePixels = shooterOnPixels({id, hp: 0, x, y})
+
+  const potentialCollideIds = movePixels.map(pixel => state.positionCharactersMap[pixel] || []).flat()
+  for (let potentialId of potentialCollideIds) if (potentialId !== id) {
+    const checkArea = getShooterArea(state.characterAttrsMap[potentialId])
+    if (isCollide(shooterArea, checkArea)) return false
+  }
 
   return true
 }
