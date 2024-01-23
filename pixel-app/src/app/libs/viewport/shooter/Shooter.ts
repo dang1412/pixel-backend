@@ -88,6 +88,7 @@ export class Shooter {
   }
 
   drawHp() {
+    if (this.l > 0) return
     const pixelSize = this.game.map.scene.options.pixelSize
     const bar = this.hpDraw
     bar.clear()

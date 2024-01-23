@@ -1,6 +1,6 @@
 import { Assets } from 'pixi.js'
 
-import { CharType, CharacterAttrs, CharacterControl, addToPixels, ctrlEqual, defaultCharacterAttrs, initGameState, proceedMoveByCtrl, removeShooter, setMove, shootFirstHitObject, shooterOnPixels } from 'adventure_engine/dist/shooting'
+import { CharType, CharacterAttrs, CharacterControl, ShootingGameState, addToPixels, ctrlEqual, defaultCharacterAttrs, initGameState, proceedMoveByCtrl, removeShooter, setMove, shootFirstHitObject, shooterOnPixels } from 'adventure_engine/dist/shooting'
 
 import { PixelMap } from '../PixelMap'
 import { Shooter } from './Shooter'
@@ -16,19 +16,13 @@ export class PixelShooter {
   private lastCtrl: CharacterControl | undefined
   // [id, x, y, w, h][]
 
-  characterAttrsMap: {[id: number]: CharacterAttrs} = {}
-  characterTypes: {[id: number]: CharType} = {}
-  positionCharactersMap: {[id: number]: number[]} = {}
-
-
-  buildingBlocks: {[id: number]: boolean}
+  state: ShootingGameState
 
   stopGame = () => {}
 
   constructor(public map: PixelMap) {
     map.engine.alwaysRender = true
-    const state = initGameState()
-    this.buildingBlocks = state.buildingBlocks
+    this.state = initGameState()
   }
 
   select(id: number) {
@@ -191,7 +185,7 @@ export class PixelShooter {
         // request control to server
         this.requestCtrl(shooter.ctrl)
         // predict own move
-        proceedMoveByCtrl(shooter.attrs, shooter.ctrl, this.positionCharactersMap, this.buildingBlocks, 25)
+        proceedMoveByCtrl(this.state, shooter.id, shooter.ctrl, 25)
       }
 
       if (!moved) {
@@ -223,11 +217,11 @@ export class PixelShooter {
       console.log('addShooter', id, type, l, i)
       const shooter = new Shooter(this, id, {...defaultCharacterAttrs, ...attrs}, l, i)
       this.idCharacterMap[id] = shooter
-      this.characterAttrsMap[id] = shooter.attrs
+      this.state.characterAttrsMap[id] = shooter.attrs
 
       // add to new pixels
       const onPixels = shooterOnPixels(shooter.attrs)
-      addToPixels(this.positionCharactersMap, id, onPixels)
+      addToPixels(this.state.positionCharactersMap, id, onPixels)
 
       return shooter
     }
@@ -236,7 +230,7 @@ export class PixelShooter {
   updateTypes(types: [number, CharType][]) {
     for (const type of types) {
       const [id, t] = type
-      this.characterTypes[id] = t
+      this.state.characterTypes[id] = t
     }
   }
 
@@ -266,7 +260,7 @@ export class PixelShooter {
     if (!char) return
 
     const angle = char.ctrl.angle / 100 - 1.5 * Math.PI
-    const hitP = shootFirstHitObject(id, angle, this.positionCharactersMap, this.characterAttrsMap, this.buildingBlocks)
+    const hitP = shootFirstHitObject(this.state, id, angle)
 
     console.log('hitP', hitP)
     if (hitP) {
@@ -287,7 +281,7 @@ export class PixelShooter {
     for (const attrs of attrsArr) {
       const id = attrs.id
       if (id >= 0 && attrs) {
-        this.addShooter(id, attrs, this.characterTypes[id] || 0)
+        this.addShooter(id, attrs, this.state.characterTypes[id] || 0)
 
         const shooter = this.idCharacterMap[id]
         // latest server values, for being controlled character to update when stop moving
@@ -304,18 +298,17 @@ export class PixelShooter {
         }
       }
     }
-    console.log('positionCharactersMap', this.positionCharactersMap)
   }
 
   domove(shooter: Shooter) {
-    setMove(shooter.attrs, shooter.latestServerX, shooter.latestServerY, this.positionCharactersMap)
+    setMove(shooter.attrs, shooter.latestServerX, shooter.latestServerY, this.state.positionCharactersMap)
   }
 
   dodead(shooter: Shooter) {
     console.log('Shooter dead', shooter.id)
     shooter.dead()
     delete this.idCharacterMap[shooter.id]
-    removeShooter(shooter.attrs, this.positionCharactersMap)
+    removeShooter(shooter.attrs, this.state.positionCharactersMap)
   }
 
   requestCtrl(ctrl: CharacterControl) {}
