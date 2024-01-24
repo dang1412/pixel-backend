@@ -254,8 +254,8 @@ function shootHitObject(x, y, bx, by, obj) {
   }
   return hitPoint;
 }
-function shootFirstHitObject(id, angle, positionCharactersMap, characterAttrsMap, buildingBlocks) {
-  var attrs = characterAttrsMap[id];
+function shootFirstHitObject(state, id, angle) {
+  var attrs = state.characterAttrsMap[id];
   if (!attrs) return null;
   var _a = [attrs.x / 100, attrs.y / 100],
     x = _a[0],
@@ -267,9 +267,9 @@ function shootFirstHitObject(id, angle, positionCharactersMap, characterAttrsMap
   var distance = Infinity;
   proceedShootLinePixels(x, y, angle, function (px, py) {
     var pixel = getPixelIndex(px, py, WORLD_WIDTH);
-    var shooterIds = positionCharactersMap[pixel] || [];
-    var objs = buildingBlocks[pixel] ? [[0, px, py, 1, 1]] : shooterIds.map(function (_id) {
-      return _id !== id && characterAttrsMap[_id] ? [_id, (characterAttrsMap[_id].x - 50) / 100, (characterAttrsMap[_id].y - 50) / 100, 1, 1] : null;
+    var shooterIds = state.positionCharactersMap[pixel] || [];
+    var objs = state.buildingBlocks[pixel] ? [[0, px, py, 1, 1]] : shooterIds.map(function (_id) {
+      return _id !== id && state.characterAttrsMap[_id] ? [_id, (state.characterAttrsMap[_id].x - 50) / 100, (state.characterAttrsMap[_id].y - 50) / 100, 1, 1] : null;
     });
     for (var _i = 0, objs_1 = objs; _i < objs_1.length; _i++) {
       var obj = objs_1[_i];
@@ -347,6 +347,11 @@ function findUniqueElements(arr1, arr2) {
   });
   return [uniqueToSet1, uniqueToSet2];
 }
+function isCollide(o1, o2) {
+  if (o1.x > o2.x + o2.w || o2.x > o1.x + o1.w) return false;
+  if (o1.y > o2.y + o2.h || o2.y > o1.y + o1.h) return false;
+  return true;
+}
 
 var characterSpeed = 60;
 function cleanupDeadChars(state) {
@@ -382,7 +387,7 @@ function proceedControls(state, ctrls, speed, logger) {
       if (ctrl.weapon === 2 || ctrl.weapon === 3) {
         var attrs = state.characterAttrsMap[ctrl.id];
         var angle = ctrl.angle / 100 - 1.5 * Math.PI;
-        var hitP = attrs ? shootFirstHitObject(attrs.id, angle, state.positionCharactersMap, state.characterAttrsMap, state.buildingBlocks) : null;
+        var hitP = attrs ? shootFirstHitObject(state, attrs.id, angle) : null;
         if (hitP) {
           if (logger) {
             logger.info("Hit %v", hitP);
@@ -400,13 +405,10 @@ function proceedControls(state, ctrls, speed, logger) {
   for (var _b = 0, ctrls_2 = ctrls; _b < ctrls_2.length; _b++) {
     var ctrl = ctrls_2[_b];
     var id = ctrl.id;
-    var attrs = state.characterAttrsMap[id];
-    if (attrs) {
-      var moved = proceedMoveByCtrl(attrs, ctrl, state.positionCharactersMap, state.buildingBlocks, speed);
-      if (moved) {
-        idSet.add(id);
-        state.characterCtrlMap[id] = ctrl;
-      }
+    var moved = proceedMoveByCtrl(state, id, ctrl, speed);
+    if (moved) {
+      idSet.add(id);
+      state.characterCtrlMap[id] = ctrl;
     }
   }
   return [updatedCtrls, Array.from(idSet)];
@@ -415,41 +417,43 @@ function removeShooter(attrs, positionCharactersMap) {
   var pixels = shooterOnPixels(attrs);
   removeFromPixels(positionCharactersMap, attrs.id, pixels);
 }
-function proceedMoveByCtrl(attrs, ctrl, positionCharactersMap, buildingBlocks, speed) {
+function proceedMoveByCtrl(state, id, ctrl, speed) {
   if (speed === void 0) {
     speed = characterSpeed;
   }
+  var attrs = state.characterAttrsMap[id];
+  if (!attrs) return false;
   var isMove = false;
   var _a = [attrs.x, attrs.y],
     x = _a[0],
     y = _a[1];
   if (ctrl.left) {
-    if (proceedMove(attrs, x - speed, y, positionCharactersMap, buildingBlocks)) {
+    if (proceedMove(state, attrs, x - speed, y)) {
       x -= speed;
       isMove = true;
     }
   }
   if (ctrl.up) {
-    if (proceedMove(attrs, x, y - speed, positionCharactersMap, buildingBlocks)) {
+    if (proceedMove(state, attrs, x, y - speed)) {
       y -= speed;
       isMove = true;
     }
   }
   if (ctrl.down) {
-    if (proceedMove(attrs, x, y + speed, positionCharactersMap, buildingBlocks)) {
+    if (proceedMove(state, attrs, x, y + speed)) {
       y += speed;
       isMove = true;
     }
   }
   if (ctrl.right) {
-    if (proceedMove(attrs, x + speed, y, positionCharactersMap, buildingBlocks)) {
+    if (proceedMove(state, attrs, x + speed, y)) {
       x += speed;
       isMove = true;
     }
   }
   return isMove;
 }
-function proceedMove(attrs, x, y, positionCharactersMap, buildingBlocks) {
+function proceedMove(state, attrs, x, y) {
   if (x < 0 || x > WORLD_WIDTH * 100 || y < 0 || y > WORLD_HEIGHT * 100) return false;
   var newPixels = shooterOnPixels({
     x: x,
@@ -459,9 +463,37 @@ function proceedMove(attrs, x, y, positionCharactersMap, buildingBlocks) {
   });
   for (var _i = 0, newPixels_1 = newPixels; _i < newPixels_1.length; _i++) {
     var pixel = newPixels_1[_i];
-    if (buildingBlocks[pixel]) return false;
+    if (state.buildingBlocks[pixel]) return false;
   }
-  setMove(attrs, x, y, positionCharactersMap);
+  if (!canMove(state, attrs.id, x, y)) {
+    return false;
+  }
+  setMove(attrs, x, y, state.positionCharactersMap);
+  return true;
+}
+function canMove(state, id, x, y) {
+  var shooterArea = getShooterArea({
+    id: id,
+    hp: 0,
+    x: x,
+    y: y
+  });
+  var movePixels = shooterOnPixels({
+    id: id,
+    hp: 0,
+    x: x,
+    y: y
+  });
+  var potentialCollideIds = movePixels.map(function (pixel) {
+    return state.positionCharactersMap[pixel] || [];
+  }).flat();
+  for (var _i = 0, potentialCollideIds_1 = potentialCollideIds; _i < potentialCollideIds_1.length; _i++) {
+    var potentialId = potentialCollideIds_1[_i];
+    if (potentialId !== id) {
+      var checkArea = getShooterArea(state.characterAttrsMap[potentialId]);
+      if (isCollide(shooterArea, checkArea)) return false;
+    }
+  }
   return true;
 }
 function setMove(attrs, x, y, positionCharactersMap) {
