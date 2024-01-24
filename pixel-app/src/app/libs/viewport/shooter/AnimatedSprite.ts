@@ -6,11 +6,12 @@ export class AnimatedSprite {
   speed = 0.15
 
   playing = false
+  // switching state that not interupted
+  switchingOnce = false
 
   private count = 0
   private running = false
   private onFinishedOneRun = () => {}
-  private switchingOnce = false
   private started = false
 
   constructor(public states: {[state: string]: string[]}, state = '') {

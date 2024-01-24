@@ -1,6 +1,11 @@
 import { Assets } from 'pixi.js'
+import { sound } from '@pixi/sound'
 
-import { CharType, CharacterAttrs, CharacterControl, ShootingGameState, addToPixels, ctrlEqual, defaultCharacterAttrs, initGameState, proceedMoveByCtrl, removeShooter, setMove, shootFirstHitObject, shooterOnPixels } from 'adventure_engine/dist/shooting'
+import {
+  CharType, CharacterAttrs, CharacterControl, ShootingGameState, addToPixels,
+  defaultCharacterAttrs, initGameState, proceedMoveByCtrl, removeShooter,
+  setMove, shootFirstHitObject, shooterOnPixels
+} from 'adventure_engine/dist/shooting'
 
 import { PixelMap } from '../PixelMap'
 import { Shooter } from './Shooter'
@@ -79,10 +84,13 @@ export class PixelShooter {
       }
     }
 
-    console.log('bundles', bundles)
-
     // load all
     await Assets.loadBundle(bundles)
+
+    sound.add('gun', '/pixel_shooter/sound-gun-shot.mp3')
+    sound.add('machingun', '/pixel_shooter/machin-gun.mp3')
+    sound.add('flamethrower', '/pixel_shooter/flamethrower.mp3')
+    sound.add('zombieatk', '/pixel_shooter/zombie-attack.mp3')
 
     console.log('Done loading')
 
@@ -204,7 +212,24 @@ export class PixelShooter {
       document.removeEventListener('keyup', keyup)
 
       clearInterval(intervalID)
+
+      // stop all shooter
+      for (const shooter of Object.values(this.idCharacterMap)) {
+        shooter.stopAnimation()
+      }
     }
+  }
+
+  playSound(s: string, sx: number, sy: number) {
+    // get viewport center
+    const {x, y} = this.map.scene.viewport.center
+    const pixelSize = this.map.scene.options.pixelSize
+    const [cx, cy] = [x / pixelSize, y / pixelSize]
+    const d = Math.sqrt(Math.pow(cx - sx, 2) + Math.pow(cy - sy, 2))
+    console.log('playSound', cx, cy, sx, sy, d)
+
+    const maxHearDistance = 20
+    if (d < maxHearDistance) sound.play(s, {volume: (maxHearDistance - d)/maxHearDistance})
   }
 
   addShooter(id: number, attrs?: CharacterAttrs, type = 0): Shooter | undefined {
@@ -287,6 +312,7 @@ export class PixelShooter {
           this.domove(shooter)
         }
 
+        if (attrs.hp < shooter.attrs.hp) shooter.getHurt()
         shooter.attrs.hp = attrs.hp
         shooter.drawHp()
         if (attrs.hp <= 0) {

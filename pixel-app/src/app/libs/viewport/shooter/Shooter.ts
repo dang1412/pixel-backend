@@ -1,4 +1,5 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js'
+import { sound } from '@pixi/sound'
 
 import { AnimatedSprite } from './AnimatedSprite'
 import { characterStates, getZombieStates } from './constants'
@@ -37,6 +38,8 @@ export class Shooter {
 
   private tick = () => {}
 
+  private hurtCount = 0
+
   constructor(public game: PixelShooter, public id: number, public attrs: CharacterAttrs, private l = 0, private i = 0) {
     if (l === 0) {
       // man
@@ -67,7 +70,6 @@ export class Shooter {
     this.showSelect(false)
 
     const char = this.char
-    // char.sprite.width = char.sprite.height = scene.options.pixelSize
 
     container.addChild(char.sprite)
     this.curX = this.attrs.x
@@ -99,6 +101,10 @@ export class Shooter {
     bar.drawRect(-200, -250, 400, 15)
   }
 
+  getHurt() {
+    this.hurtCount = 10
+  }
+
   setLatestServer(x: number, y: number) {
     this.latestServerX = x
     this.latestServerY = y
@@ -116,10 +122,14 @@ export class Shooter {
     this.char.sprite.rotation = angle
   }
 
-  dead() {
+  stopAnimation() {
     this.game.map.engine.removeTick(this.tick)
-    console.log('Man dead', this.attrs)
     this.char.stop()
+  }
+
+  dead() {
+    console.log('Man dead', this.attrs)
+    this.stopAnimation()
     this.char.switch(this.getActionState('death'))
     this.char.speed = 0.8
     this.char.start(() => {
@@ -147,8 +157,17 @@ export class Shooter {
     this.updatePos()
 
     if (this.ctrl.fire) {
-      this.char.switchOnce(this.getActionState('attack'), this.attackSpeed)
-      if (!this.selectingCircle.visible) this.ctrl.fire = false
+      if (!this.char.switchingOnce) {
+        // flamethrower speed
+        const speed = this.ctrl.weapon === 5 ? 0.08 : this.attackSpeed
+        this.char.switchOnce(this.getActionState('attack'), speed)
+        this.attackSound()
+      }
+      if (!this.selectingCircle.visible) {
+        this.ctrl.fire = false
+      } else {
+        
+      }
     } else if (moving) {
       this.char.switch(this.getActionState('walk'))
     } else {
@@ -157,6 +176,29 @@ export class Shooter {
 
     // rotate
     this.char.sprite.rotation = this.ctrl.angle / 100
+
+    // get hurt
+    if (this.hurtCount > 0) {
+      this.hurtCount--
+      this.char.sprite.tint = 0xff0000
+    } else {
+      this.char.sprite.tint = 0xffffff
+    }
+  }
+
+  private attackSound() {
+    let s = ''
+    if (this.l < 1) {
+      // human
+      if (this.ctrl.weapon === 2) s = 'gun'
+      else if (this.ctrl.weapon === 3) s = 'machingun'
+      else if (this.ctrl.weapon === 5) s = 'flamethrower'
+    } else {
+      // zombie
+      s = 'zombieatk'
+    }
+
+    if (s) this.game.playSound(s, this.curX / 100, this.curY / 100)
   }
 
   // move toward target
