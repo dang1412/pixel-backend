@@ -1,4 +1,4 @@
-import { Renderer, Sprite, Texture, BaseTexture, Container } from 'pixi.js'
+import { Renderer, Sprite, Texture, BaseTexture, Container, TilingSprite } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
 
 import { drawViewportGrid, getCanvasXY, getPixelIndex, getPixelIndexesFromArea, getPixelXYFromIndex, getViewportCoord } from './utils'
@@ -8,6 +8,7 @@ export interface SceneViewportOpts {
   pixelSize: number
   worldWidthPixel: number
   worldHeightPixel: number
+  noGrid?: boolean
   // viewWidth: number
   // viewHeight: number
 }
@@ -36,24 +37,29 @@ export class SceneContainer {
   private lasty = 0
   private lastzoom = 0
 
+  private bgContainer: Container
+
   /**
    * Constructor
    * @param renderer 
    * @param options 
    */
   constructor(public viewport: Viewport, public options: SceneViewportOpts) {
-    const { pixelSize, worldWidthPixel, worldHeightPixel } = options
+    const { pixelSize, worldWidthPixel, worldHeightPixel, noGrid = false } = options
 
-    // main
-    this.mainContainer = new Container()
     // wrapper
     this.wrapperContainer = new Container()
-    this.wrapperContainer.addChild(this.mainContainer)
+    // add background layer first
+    this.bgContainer = new Container()
+    // main, this is included in mini-map
+    this.mainContainer = new Container()
 
+    this.wrapperContainer.addChild(this.bgContainer)
+    this.wrapperContainer.addChild(this.mainContainer)
+    
     viewport.addChild(this.wrapperContainer)
 
-    // viewport.moveCenter(worldWidth / 2, worldHeight / 2)
-    drawViewportGrid(this.wrapperContainer, pixelSize, worldWidthPixel, worldHeightPixel)
+    if (!noGrid) drawViewportGrid(this.wrapperContainer, pixelSize, worldWidthPixel, worldHeightPixel)
   }
 
   moveToArea(area: PixelArea) {
@@ -199,6 +205,18 @@ export class SceneContainer {
     return this.addLayerAreaTexture(area, texture, layer)
   }
 
+  setTileBg(tileUrl: string, scale = 1) {
+    const texture = Texture.from(tileUrl)
+    const w = this.options.worldWidthPixel * this.options.pixelSize * scale
+    const h = this.options.worldHeightPixel * this.options.pixelSize * scale
+    // this.addLayerAreaTexture({x: 0, y: 0, w, h}, texture, 'background')
+    const tilingSprite = new TilingSprite(texture, w, h)
+    tilingSprite.scale.set(1/scale, 1/scale)
+    tilingSprite.alpha = 0.9
+    // const container = this.getLayerContainer('background')
+    this.bgContainer.addChild(tilingSprite)
+  }
+
   /**
    * Add image to an area using HTMLImageElement
    * @param area 
@@ -216,7 +234,7 @@ export class SceneContainer {
    * @param layer 
    * @returns 
    */
-  public getLayerContainer(layer = ''): Container {
+  getLayerContainer(layer = ''): Container {
     // init layer's {pixel => Sprite} map
     if (!this.layerPixelSpriteMap[layer]) {
       this.layerPixelSpriteMap[layer] = {}

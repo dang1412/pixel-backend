@@ -65,8 +65,10 @@ export class PixelShooter {
       'gunhit',
       'man-death',
     ]
+    Assets.add('tilebg', '/pixel_shooter/ground_tile.png')
     Assets.add({alias: 'shooter_select', src: '/pixel_shooter/circle.png'})
     await Assets.load('shooter_select')
+    await Assets.load('tilebg')
 
     // load zombies
     for (let l = 1; l <= 1; l++) {
@@ -84,6 +86,10 @@ export class PixelShooter {
 
     console.log('Done loading')
 
+    this.initGame()
+  }
+
+  initGame() {
     // mouse move
     const onmousemove = (ex: number, ey: number, px: number, py: number, cx: number, cy: number) => {
       const shooter = this.idCharacterMap[this.selectingShooterId]
@@ -94,18 +100,6 @@ export class PixelShooter {
 
     const ondropman = (data: DataTransfer | null, px: number, py: number, x: number, y: number) => {
       const type = Number(data?.getData('type')) || 0
-      if (type > 1) {
-        // zombie
-        // test
-        // const l = Number(data?.getData('l')) || 0
-        // const i = Number(data?.getData('i')) || 0
-        // const shooter = this.addShooter(99, {id: 99, hp: 100, x: px * 100, y: py * 100}, l, i)
-        // if (shooter) {
-        //   shooter.setLatestServer(px * 100, py * 100)
-        // }
-      } else {
-        // human
-      }
       // request new shooter
       this.requestAddShooter(type, px * 100, py * 100)
     }
@@ -199,6 +193,8 @@ export class PixelShooter {
         count = 0
       }
     }, 100)
+
+    this.map.scene.setTileBg('tilebg', 2)
 
     this.stopGame = () => {
       this.map.engine.removeListener('mousemove', onmousemove)

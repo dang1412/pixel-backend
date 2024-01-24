@@ -16,6 +16,7 @@ interface Props {
   getDisplayFloat?: (area: PixelArea, closeSelect: () => void, mode?: 0 | 1 | 2) => JSX.Element
   allowToggleMode?: boolean
   customViewTools?: JSX.Element
+  firstSceneNoGrid?: boolean
 }
 
 const getSetPixelFunc: (x: number, y: number, w: number, h: number) => (cur: PixelArea) => PixelArea = (x: number, y: number, w: number, h: number) => {
@@ -35,6 +36,7 @@ export const ViewportWorld: React.FC<Props> = (props) => {
     getDisplayFloat,
     allowToggleMode = true,
     customViewTools = <></>,
+    firstSceneNoGrid = false,
   } = props
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -93,7 +95,7 @@ export const ViewportWorld: React.FC<Props> = (props) => {
       height,
       minPixelSize: pixelSize
     })
-    const mainSceneIndex = engine.createScene(worldWidthPixel, worldHeightPixel)
+    const mainSceneIndex = engine.createScene(worldWidthPixel, worldHeightPixel, firstSceneNoGrid)
     engine.switchScene(mainSceneIndex)
 
     // output engine
@@ -177,9 +179,9 @@ export const ViewportWorld: React.FC<Props> = (props) => {
 
   return (
     <div id='WrapFullscreen' className={isFullScreen ? 'fullscreen' : ''} ref={wrapperRef}>
-      <FloatDialog top={mouseXY.y + window.scrollY} left={mouseXY.x}>
-        {getDisplayFloat && getDisplayFloat(selectingArea, closeSelect)}
-      </FloatDialog>
+      {getDisplayFloat && <FloatDialog top={mouseXY.y + window.scrollY} left={mouseXY.x}>
+        {getDisplayFloat(selectingArea, closeSelect)}
+      </FloatDialog>}
       <div className='view-tools'>
         <button onClick={toggleFullscreen} title='Toggle fullscreen mode'><FaMaximize /></button>
         {allowToggleMode && <button onClick={toggleMode} title='Toggle drag/select mode'>{isDragMode ? <FaArrowPointer /> : <FaHand />}</button>}

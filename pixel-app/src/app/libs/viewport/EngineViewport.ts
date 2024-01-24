@@ -173,12 +173,12 @@ export class EngineViewport {
     return this.renderer
   }
 
-  createScene(worldWidthPixel: number, worldHeightPixel: number): number {
+  createScene(worldWidthPixel: number, worldHeightPixel: number, noGrid = false): number {
     const screenWidth = this.screenWidth
     const screenHeight = this.screenHeight
     // make it fit but not smaller than minPixelSize
     const pixelSize = Math.max(screenWidth / worldWidthPixel, screenHeight / worldHeightPixel, this.minPixelSize)
-    const scene = new SceneContainer(this.viewport, {pixelSize, worldWidthPixel, worldHeightPixel})
+    const scene = new SceneContainer(this.viewport, {pixelSize, worldWidthPixel, worldHeightPixel, noGrid})
     return this.addScene(scene)
   }
 

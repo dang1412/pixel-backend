@@ -49,8 +49,9 @@ export const ViewShooter: React.FC<Props> = (props) => {
         worldHeightPixel={100}
         worldWidthPixel={100}
         pixelSize={30}
-        getDisplayFloat={getFloatDialog}
+        // getDisplayFloat={getFloatDialog}
         allowToggleMode={false}
+        firstSceneNoGrid={true}
       />
       <div>
         <img className='inline-block' id={`man-shooter`} src='/pixel_shooter/man_icon_no_bg.png' onDragStart={(e) => dragMan(e)} width="100" height="100" />
