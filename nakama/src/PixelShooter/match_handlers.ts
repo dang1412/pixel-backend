@@ -112,6 +112,11 @@ function matchLoop(
       const ctrl = decodeControls(m.data)[0]
       logger.info('Received control %v', ctrl)
       ctrls.push(ctrl)
+    } else if (m.opCode === 2) {
+      // set move target
+      const decoded = decodeAttrsArray(m.data)[0]
+      logger.info('Set move target %v', decoded)
+      state.game.characterTarget[decoded.id] = [decoded.x, decoded.y]
     }
   })
 
