@@ -85,4 +85,13 @@ export class ShooterService {
 
     return ''
   }
+
+  async requestTargetMove(attrs: CharacterAttrs): Promise<string> {
+    if (!this.socket || !this.matchId) return 'no socket'
+
+    const data = encodeAttrsArray([attrs])
+    await this.socket.sendMatchState(this.matchId, 2, new Uint8Array(data))
+
+    return ''
+  }
 }

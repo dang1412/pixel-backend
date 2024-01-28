@@ -64,6 +64,11 @@ export function ViewShooterWrapper() {
       service.requestAddShooter(type, x, y)
     }
 
+    game.requestTargetMove = (attrs) => {
+      console.log('requestTargetMove', attrs)
+      service.requestTargetMove(attrs)
+    }
+
     updateLoading(-1)
   }, [])
 

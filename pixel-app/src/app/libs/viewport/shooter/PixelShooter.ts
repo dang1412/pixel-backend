@@ -117,6 +117,12 @@ export class PixelShooter {
 
     this.map.engine.on('mousemove', onmousemove)
     this.map.engine.on('drop', ondropman)
+    this.map.engine.on('click', (px: number, py: number) => {
+      console.log('Map click', px, py)
+      if (this.selectingShooterId) {
+        // this.requestTargetMove({id: this.selectingShooterId, hp: 0, x: px * 100 + 50, y: py * 100 + 50})
+      }
+    })
 
     // key pressed
     let lastFireTime = 0
@@ -340,4 +346,5 @@ export class PixelShooter {
 
   requestCtrl(ctrl: CharacterControl) {}
   requestAddShooter(type: number, x: number, y: number) {}
+  requestTargetMove(attrs: CharacterAttrs) {}
 }
