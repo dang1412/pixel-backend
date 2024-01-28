@@ -87,9 +87,12 @@ export class PixelShooter {
     // load all
     await Assets.loadBundle(bundles)
 
+    sound.add('knife', '/pixel_shooter/knife-slice.mp3')
     sound.add('gun', '/pixel_shooter/sound-gun-shot.mp3')
     sound.add('machingun', '/pixel_shooter/machin-gun.mp3')
+    sound.add('bat', '/pixel_shooter/wooden.mp3')
     sound.add('flamethrower', '/pixel_shooter/flamethrower.mp3')
+
     sound.add('zombieatk', '/pixel_shooter/zombie-attack.mp3')
 
     console.log('Done loading')
@@ -217,6 +220,8 @@ export class PixelShooter {
       for (const shooter of Object.values(this.idCharacterMap)) {
         shooter.stopAnimation()
       }
+
+      this.map.engine.destroy()
     }
   }
 

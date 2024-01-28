@@ -191,7 +191,9 @@ export class Shooter {
     if (this.l < 1) {
       // human
       if (this.ctrl.weapon === 2) s = 'gun'
+      else if (this.ctrl.weapon === 1) s = 'knife'
       else if (this.ctrl.weapon === 3) s = 'machingun'
+      else if (this.ctrl.weapon === 4) s = 'bat'
       else if (this.ctrl.weapon === 5) s = 'flamethrower'
     } else {
       // zombie

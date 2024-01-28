@@ -49,6 +49,9 @@ export class EngineViewport {
   //
   alwaysRender = false
 
+  //
+  stopped = false
+
   on(event: string, handler: Function) {
     const funcs = this.handlersMap.get(event) || []
     funcs.push(handler)
@@ -259,6 +262,11 @@ export class EngineViewport {
     this.emit('select', mx, my, x, y, x + w - 1, y + h - 1)
   }
 
+  destroy() {
+    this.stopped = true
+    this.viewport.destroy()
+  }
+
   private updateViewportDragMode() {
     const scene = this.getCurrentScene()
     if (scene) {
@@ -271,6 +279,8 @@ export class EngineViewport {
   }
 
   private runUpdate() {
+    if (this.stopped) return
+
     if (this.alwaysRender || this.viewport.dirty) {
       // render wrapper includes minimap and viewport
       // console.log('render ticks length', this.ticks.length)
