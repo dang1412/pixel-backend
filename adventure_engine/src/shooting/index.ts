@@ -1,7 +1,5 @@
 export * from './encodeFuncs'
-export * from './proceedGamePlay'
+export * from './main'
 export * from './types'
-// export * from './fbs'
 export * from './calculateShoot'
-export * from './utils'
 export * from './initGameState'

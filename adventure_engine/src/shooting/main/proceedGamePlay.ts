@@ -1,8 +1,8 @@
-import { WORLD_HEIGHT, WORLD_WIDTH } from '../utils'
-import { shootFirstHitObject } from './calculateShoot'
-import { encodeAttrsArray, encodeCharacterTypes } from './encodeFuncs'
-import { CharType, CharacterAttrs, CharacterControl, ShootingGameState, defaultCharacterAttrs, defaultCharacterControl } from './types'
-import { findUniqueElements, getShooterArea, isCollide, shooterOnPixels } from './utils'
+import { shootFirstHitObject } from '../calculateShoot'
+import { encodeAttrsArray, encodeCharacterTypes } from '../encodeFuncs'
+import { CharType, CharacterAttrs, CharacterControl, ShootingGameState, defaultCharacterControl } from '../types'
+import { proceedMoveTarget } from './proceedMoveTarget'
+import { addToPixels, canMove, removeFromPixels, setMove, shooterOnPixels } from './utils'
 
 const characterSpeed = 60
 
@@ -84,8 +84,14 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
       idSet.add(id)
       // remember latest control
       state.characterCtrlMap[id] = ctrl
+      // delete from target move
+      delete state.characterTarget[id]
     }
   }
+
+  // execute target move
+  const movedIds = proceedMoveTarget(state)
+  for (const movedId of movedIds) idSet.add(movedId)
 
   return [updatedCtrls, Array.from(idSet)]
 }
@@ -165,20 +171,8 @@ function proceedMove(
   attrs: CharacterAttrs,
   x: number,
   y: number,
-  // positionCharactersMap: {[id: number]: number[]},
-  // buildingBlocks: {[id: number]: boolean},
 ): boolean {
-  // check out of the map
-  if (x < 0 || x > WORLD_WIDTH * 100 || y < 0 || y > WORLD_HEIGHT * 100) return false
-
-  const newPixels = shooterOnPixels({x, y, hp: 0, id: 0})
-
-  // check if newPixels are not building block
-  for (const pixel of newPixels) {
-    if (state.buildingBlocks[pixel]) return false
-  }
-
-  // check if collide with other shooters
+  // check if collide with building or other shooters
   if (!canMove(state, attrs.id, x, y)) {
     return false
   }
@@ -187,71 +181,6 @@ function proceedMove(
   setMove(attrs, x, y, state.positionCharactersMap)
 
   return true
-}
-
-function canMove(state: ShootingGameState, id: number, x: number, y: number): boolean {
-  const shooterArea = getShooterArea({id, hp: 0, x, y})
-  const movePixels = shooterOnPixels({id, hp: 0, x, y})
-
-  const potentialCollideIds = movePixels.map(pixel => state.positionCharactersMap[pixel] || []).flat()
-  for (let potentialId of potentialCollideIds) if (potentialId !== id) {
-    const checkArea = getShooterArea(state.characterAttrsMap[potentialId])
-    if (isCollide(shooterArea, checkArea)) return false
-  }
-
-  return true
-}
-
-/**
- * This function is also used by client, to update all shooter's position from server
- * 
- * @param attrs 
- * @param x 
- * @param y 
- * @param positionCharactersMap 
- */
-export function setMove(attrs: CharacterAttrs, x: number, y: number, positionCharactersMap: {[id: number]: number[]}) {
-  const beforeMovePixels = shooterOnPixels(attrs)
-  const afterMovePixels = shooterOnPixels({x, y, hp: 0, id: 0})
-  const [oldPixels, newPixels] = findUniqueElements(beforeMovePixels, afterMovePixels)
-
-  // move
-  attrs.x = x
-  attrs.y = y
-
-  // remove from old pixels
-  removeFromPixels(positionCharactersMap, attrs.id, oldPixels)
-
-  // add to new pixels
-  addToPixels(positionCharactersMap, attrs.id, newPixels)
-}
-
-/**
- * 
- * @param positionCharactersMap 
- * @param id 
- * @param pixels 
- */
-export function removeFromPixels(positionCharactersMap: {[id: number]: number[]}, id: number, pixels: number[]) {
-  for (const pixel of pixels) if (positionCharactersMap[pixel]) {
-    positionCharactersMap[pixel] = positionCharactersMap[pixel].filter(_id => _id !== id)
-    if (positionCharactersMap[pixel].length === 0) {
-      delete positionCharactersMap[pixel]
-    }
-  }
-}
-
-/**
- * 
- * @param positionCharactersMap 
- * @param id 
- * @param pixels 
- */
-export function addToPixels(positionCharactersMap: {[id: number]: number[]}, id: number, pixels: number[]) {
-  for (const pixel of pixels) {
-    if (!positionCharactersMap[pixel]) positionCharactersMap[pixel] = [id]
-    else positionCharactersMap[pixel].push(id)
-  }
 }
 
 export function addShooter(state: ShootingGameState, x: number, y: number, type = CharType.man): CharacterAttrs {

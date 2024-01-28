@@ -23,6 +23,7 @@ export function initGameState(): ShootingGameState {
   return {
     characterAttrsMap: {},
     characterCtrlMap: {},
+    characterTarget: {},
     characterTypes: {},
     positionCharactersMap: {},
     buildingBlocks,
