@@ -1,6 +1,7 @@
 import { shootFirstHitObject } from '../calculateShoot'
 import { encodeAttrsArray, encodeCharacterTypes } from '../encodeFuncs'
 import { CharType, CharacterAttrs, CharacterControl, ShootingGameState, defaultCharacterControl } from '../types'
+import { GAME_LOOP_TIME, SHOOTER_SPEED } from './constants'
 import { proceedMoveTarget } from './proceedMoveTarget'
 import { addToPixels, canMove, removeFromPixels, setMove, shooterOnPixels } from './utils'
 
@@ -79,7 +80,7 @@ export function proceedControls(state: ShootingGameState, ctrls: CharacterContro
   
   for (const ctrl of ctrls) {
     const id = ctrl.id
-    const moved = proceedMoveByCtrl(state, id, ctrl, speed)
+    const moved = proceedMoveByCtrl(state, id, ctrl)
     if (moved) {
       idSet.add(id)
       // remember latest control
@@ -120,11 +121,24 @@ export function proceedMoveByCtrl(
   ctrl: CharacterControl,
   // positionCharactersMap: {[id: number]: number[]},
   // buildingBlocks: {[id: number]: boolean},
-  speed = characterSpeed
+  // speed = characterSpeed
 ): boolean {
   const attrs = state.characterAttrsMap[id]
   if (!attrs) return false
 
+  // cleanup ctrl
+  if (ctrl.left && ctrl.right) {
+    ctrl.left = ctrl.right = false
+  }
+  if (ctrl.up && ctrl.down) {
+    ctrl.up = ctrl.down = false
+  }
+  // adjust speed if go diagonally
+  const goDiagonal = (ctrl.left && (ctrl.up || ctrl.down)) || (ctrl.right && (ctrl.up || ctrl.down))
+  
+  // calculate speed
+  let speed = SHOOTER_SPEED * GAME_LOOP_TIME * 100 / (goDiagonal ? Math.sqrt(2) : 1)
+  
   let isMove = false
   let [x, y] = [attrs.x, attrs.y]
   // move

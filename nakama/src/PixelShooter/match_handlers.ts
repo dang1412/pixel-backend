@@ -1,4 +1,4 @@
-import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters, cleanupDeadChars, initGameState, encodeShooterTypes } from 'adventure_engine/dist/shooting'
+import { ShootingGameState, encodeControls, decodeControls, proceedControls, CharacterControl, decodeAttrsArray, addShooter, encodeAllShooters, cleanupDeadChars, initGameState, encodeShooterTypes, TICK_RATE } from 'adventure_engine/dist/shooting'
 // import { TextDecoder, TextEncoder } from '../encode'
 
 interface MatchState {
@@ -19,7 +19,7 @@ function matchInit(
 
   return {
     state: { presences, game },
-    tickRate: 5,
+    tickRate: TICK_RATE,
     label: 'PixelShooter'
   }
 }

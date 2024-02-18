@@ -52,6 +52,8 @@ export class EngineViewport {
   //
   stopped = false
 
+  private lastTimeFrame = 0
+
   on(event: string, handler: Function) {
     const funcs = this.handlersMap.get(event) || []
     funcs.push(handler)
@@ -278,8 +280,11 @@ export class EngineViewport {
     }
   }
 
-  private runUpdate() {
+  private runUpdate(t = 0) {
     if (this.stopped) return
+
+    const delta = this.lastTimeFrame ? t - this.lastTimeFrame : 0
+    this.lastTimeFrame = t
 
     if (this.alwaysRender || this.viewport.dirty) {
       // render wrapper includes minimap and viewport
@@ -287,11 +292,11 @@ export class EngineViewport {
       this.renderer.render(this.wrapper)
       this.viewport.dirty = false
       for (const tick of this.ticks) {
-        tick(10)
+        tick(delta)
       }
     }
 
-    requestAnimationFrame(() => this.runUpdate())
+    requestAnimationFrame((t) => this.runUpdate(t))
     // setTimeout(() => this.runUpdate(), 40)
   }
 

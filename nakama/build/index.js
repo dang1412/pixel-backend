@@ -140,6 +140,10 @@ function encodeCharacterTypes(types) {
   return buffer;
 }
 
+var TICK_RATE = 6;
+var GAME_LOOP_TIME = 1 / TICK_RATE;
+var SHOOTER_SPEED = 3;
+
 function getPixelIndex(x, y, w) {
   return y * w + x;
 }
@@ -162,6 +166,161 @@ function getPixelsFromArea(area, mapWidth) {
 
 var WORLD_WIDTH = 100;
 var WORLD_HEIGHT = 100;
+
+function getShooterArea(shooter) {
+  return {
+    x: (shooter.x - 50) / 100,
+    y: (shooter.y - 50) / 100,
+    w: 1,
+    h: 1
+  };
+}
+function shooterOnPixels(shooter) {
+  var shooterArea = getShooterArea(shooter);
+  var pixelArea = getPixelAreaFromObjectArea(shooterArea);
+  return getPixelsFromArea(pixelArea, WORLD_WIDTH);
+}
+function getPixelAreaFromObjectArea(objArea) {
+  var x = objArea.x,
+    y = objArea.y,
+    w = objArea.w,
+    h = objArea.h;
+  var x1 = Math.floor(x);
+  var y1 = Math.floor(y);
+  var x2 = Math.ceil(x + w) - 1;
+  var y2 = Math.ceil(y + h) - 1;
+  return {
+    x: x1,
+    y: y1,
+    w: x2 - x1 + 1,
+    h: y2 - y1 + 1
+  };
+}
+function findUniqueElements(arr1, arr2) {
+  var set1 = new Set(arr1);
+  var set2 = new Set(arr2);
+  var uniqueToSet1 = arr1.filter(function (a) {
+    return !set2.has(a);
+  });
+  var uniqueToSet2 = arr2.filter(function (a) {
+    return !set1.has(a);
+  });
+  return [uniqueToSet1, uniqueToSet2];
+}
+function isCollide(o1, o2) {
+  if (o1.x > o2.x + o2.w || o2.x > o1.x + o1.w) return false;
+  if (o1.y > o2.y + o2.h || o2.y > o1.y + o1.h) return false;
+  return true;
+}
+function canMove(state, id, x, y) {
+  if (x < 0 || x > WORLD_WIDTH * 100 || y < 0 || y > WORLD_HEIGHT * 100) return false;
+  var movePixels = shooterOnPixels({
+    id: id,
+    hp: 0,
+    x: x,
+    y: y
+  });
+  for (var _i = 0, movePixels_1 = movePixels; _i < movePixels_1.length; _i++) {
+    var pixel = movePixels_1[_i];
+    if (state.buildingBlocks[pixel]) return false;
+  }
+  var shooterArea = getShooterArea({
+    id: id,
+    hp: 0,
+    x: x,
+    y: y
+  });
+  var potentialCollideIds = movePixels.map(function (pixel) {
+    return state.positionCharactersMap[pixel] || [];
+  }).flat();
+  for (var _a = 0, potentialCollideIds_1 = potentialCollideIds; _a < potentialCollideIds_1.length; _a++) {
+    var potentialId = potentialCollideIds_1[_a];
+    if (potentialId !== id) {
+      var checkArea = getShooterArea(state.characterAttrsMap[potentialId]);
+      if (isCollide(shooterArea, checkArea)) return false;
+    }
+  }
+  return true;
+}
+function setMove(attrs, x, y, positionCharactersMap) {
+  var beforeMovePixels = shooterOnPixels(attrs);
+  var afterMovePixels = shooterOnPixels({
+    x: x,
+    y: y,
+    hp: 0,
+    id: 0
+  });
+  var _a = findUniqueElements(beforeMovePixels, afterMovePixels),
+    oldPixels = _a[0],
+    newPixels = _a[1];
+  attrs.x = x;
+  attrs.y = y;
+  removeFromPixels(positionCharactersMap, attrs.id, oldPixels);
+  addToPixels(positionCharactersMap, attrs.id, newPixels);
+}
+function removeFromPixels(positionCharactersMap, id, pixels) {
+  for (var _i = 0, pixels_1 = pixels; _i < pixels_1.length; _i++) {
+    var pixel = pixels_1[_i];
+    if (positionCharactersMap[pixel]) {
+      positionCharactersMap[pixel] = positionCharactersMap[pixel].filter(function (_id) {
+        return _id !== id;
+      });
+      if (positionCharactersMap[pixel].length === 0) {
+        delete positionCharactersMap[pixel];
+      }
+    }
+  }
+}
+function addToPixels(positionCharactersMap, id, pixels) {
+  for (var _i = 0, pixels_2 = pixels; _i < pixels_2.length; _i++) {
+    var pixel = pixels_2[_i];
+    if (!positionCharactersMap[pixel]) positionCharactersMap[pixel] = [id];else positionCharactersMap[pixel].push(id);
+  }
+}
+
+function proceedMoveTarget(state) {
+  var movedIds = [];
+  var ids = Object.keys(state.characterTarget);
+  for (var _i = 0, ids_1 = ids; _i < ids_1.length; _i++) {
+    var idstr = ids_1[_i];
+    var id = Number(idstr);
+    var attrs = state.characterAttrsMap[id];
+    var _a = state.characterTarget[id],
+      tx = _a[0],
+      ty = _a[1];
+    var distance = SHOOTER_SPEED * GAME_LOOP_TIME * 100;
+    var x = attrs.x,
+      y = attrs.y;
+    var _b = calculateMoveToTarget(x, y, tx, ty, distance),
+      nx = _b[0],
+      ny = _b[1];
+    if (nx === tx && ny === ty) {
+      delete state.characterTarget[id];
+    }
+    if (canMove(state, id, nx, ny)) {
+      setMove(attrs, nx, ny, state.positionCharactersMap);
+      movedIds.push(id);
+    } else {
+      delete state.characterTarget[id];
+    }
+  }
+  return movedIds;
+}
+function calDistance(x1, y1, x2, y2) {
+  var dx = x2 - x1;
+  var dy = y2 - y1;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+function calculateMoveToTarget(x, y, tx, ty, distance) {
+  var d1 = calDistance(x, y, tx, ty);
+  if (d1 <= distance) {
+    return [tx, ty];
+  }
+  var angle = Math.atan2(ty - y, tx - x);
+  var dy = Math.sin(angle) * distance;
+  var dx = Math.cos(angle) * distance;
+  return [x + dx, y + dy];
+}
 
 function angleEqual(angle, i) {
   return Math.round(angle * 100) === Math.round(i * Math.PI * 100);
@@ -307,53 +466,6 @@ var CharType;
   CharType[CharType["zombie4"] = 5] = "zombie4";
 })(CharType || (CharType = {}));
 
-function getShooterArea(shooter) {
-  return {
-    x: (shooter.x - 50) / 100,
-    y: (shooter.y - 50) / 100,
-    w: 1,
-    h: 1
-  };
-}
-function shooterOnPixels(shooter) {
-  var shooterArea = getShooterArea(shooter);
-  var pixelArea = getPixelAreaFromObjectArea(shooterArea);
-  return getPixelsFromArea(pixelArea, WORLD_WIDTH);
-}
-function getPixelAreaFromObjectArea(objArea) {
-  var x = objArea.x,
-    y = objArea.y,
-    w = objArea.w,
-    h = objArea.h;
-  var x1 = Math.floor(x);
-  var y1 = Math.floor(y);
-  var x2 = Math.ceil(x + w) - 1;
-  var y2 = Math.ceil(y + h) - 1;
-  return {
-    x: x1,
-    y: y1,
-    w: x2 - x1 + 1,
-    h: y2 - y1 + 1
-  };
-}
-function findUniqueElements(arr1, arr2) {
-  var set1 = new Set(arr1);
-  var set2 = new Set(arr2);
-  var uniqueToSet1 = arr1.filter(function (a) {
-    return !set2.has(a);
-  });
-  var uniqueToSet2 = arr2.filter(function (a) {
-    return !set1.has(a);
-  });
-  return [uniqueToSet1, uniqueToSet2];
-}
-function isCollide(o1, o2) {
-  if (o1.x > o2.x + o2.w || o2.x > o1.x + o1.w) return false;
-  if (o1.y > o2.y + o2.h || o2.y > o1.y + o1.h) return false;
-  return true;
-}
-
-var characterSpeed = 60;
 function cleanupDeadChars(state) {
   var ids = Object.keys(state.characterAttrsMap);
   for (var _i = 0, ids_1 = ids; _i < ids_1.length; _i++) {
@@ -405,11 +517,17 @@ function proceedControls(state, ctrls, speed, logger) {
   for (var _b = 0, ctrls_2 = ctrls; _b < ctrls_2.length; _b++) {
     var ctrl = ctrls_2[_b];
     var id = ctrl.id;
-    var moved = proceedMoveByCtrl(state, id, ctrl, speed);
+    var moved = proceedMoveByCtrl(state, id, ctrl);
     if (moved) {
       idSet.add(id);
       state.characterCtrlMap[id] = ctrl;
+      delete state.characterTarget[id];
     }
+  }
+  var movedIds = proceedMoveTarget(state);
+  for (var _c = 0, movedIds_1 = movedIds; _c < movedIds_1.length; _c++) {
+    var movedId = movedIds_1[_c];
+    idSet.add(movedId);
   }
   return [updatedCtrls, Array.from(idSet)];
 }
@@ -417,12 +535,17 @@ function removeShooter(attrs, positionCharactersMap) {
   var pixels = shooterOnPixels(attrs);
   removeFromPixels(positionCharactersMap, attrs.id, pixels);
 }
-function proceedMoveByCtrl(state, id, ctrl, speed) {
-  if (speed === void 0) {
-    speed = characterSpeed;
-  }
+function proceedMoveByCtrl(state, id, ctrl) {
   var attrs = state.characterAttrsMap[id];
   if (!attrs) return false;
+  if (ctrl.left && ctrl.right) {
+    ctrl.left = ctrl.right = false;
+  }
+  if (ctrl.up && ctrl.down) {
+    ctrl.up = ctrl.down = false;
+  }
+  var goDiagonal = ctrl.left && (ctrl.up || ctrl.down) || ctrl.right && (ctrl.up || ctrl.down);
+  var speed = SHOOTER_SPEED * GAME_LOOP_TIME * 100 / (goDiagonal ? Math.sqrt(2) : 1);
   var isMove = false;
   var _a = [attrs.x, attrs.y],
     x = _a[0],
@@ -454,82 +577,11 @@ function proceedMoveByCtrl(state, id, ctrl, speed) {
   return isMove;
 }
 function proceedMove(state, attrs, x, y) {
-  if (x < 0 || x > WORLD_WIDTH * 100 || y < 0 || y > WORLD_HEIGHT * 100) return false;
-  var newPixels = shooterOnPixels({
-    x: x,
-    y: y,
-    hp: 0,
-    id: 0
-  });
-  for (var _i = 0, newPixels_1 = newPixels; _i < newPixels_1.length; _i++) {
-    var pixel = newPixels_1[_i];
-    if (state.buildingBlocks[pixel]) return false;
-  }
   if (!canMove(state, attrs.id, x, y)) {
     return false;
   }
   setMove(attrs, x, y, state.positionCharactersMap);
   return true;
-}
-function canMove(state, id, x, y) {
-  var shooterArea = getShooterArea({
-    id: id,
-    hp: 0,
-    x: x,
-    y: y
-  });
-  var movePixels = shooterOnPixels({
-    id: id,
-    hp: 0,
-    x: x,
-    y: y
-  });
-  var potentialCollideIds = movePixels.map(function (pixel) {
-    return state.positionCharactersMap[pixel] || [];
-  }).flat();
-  for (var _i = 0, potentialCollideIds_1 = potentialCollideIds; _i < potentialCollideIds_1.length; _i++) {
-    var potentialId = potentialCollideIds_1[_i];
-    if (potentialId !== id) {
-      var checkArea = getShooterArea(state.characterAttrsMap[potentialId]);
-      if (isCollide(shooterArea, checkArea)) return false;
-    }
-  }
-  return true;
-}
-function setMove(attrs, x, y, positionCharactersMap) {
-  var beforeMovePixels = shooterOnPixels(attrs);
-  var afterMovePixels = shooterOnPixels({
-    x: x,
-    y: y,
-    hp: 0,
-    id: 0
-  });
-  var _a = findUniqueElements(beforeMovePixels, afterMovePixels),
-    oldPixels = _a[0],
-    newPixels = _a[1];
-  attrs.x = x;
-  attrs.y = y;
-  removeFromPixels(positionCharactersMap, attrs.id, oldPixels);
-  addToPixels(positionCharactersMap, attrs.id, newPixels);
-}
-function removeFromPixels(positionCharactersMap, id, pixels) {
-  for (var _i = 0, pixels_1 = pixels; _i < pixels_1.length; _i++) {
-    var pixel = pixels_1[_i];
-    if (positionCharactersMap[pixel]) {
-      positionCharactersMap[pixel] = positionCharactersMap[pixel].filter(function (_id) {
-        return _id !== id;
-      });
-      if (positionCharactersMap[pixel].length === 0) {
-        delete positionCharactersMap[pixel];
-      }
-    }
-  }
-}
-function addToPixels(positionCharactersMap, id, pixels) {
-  for (var _i = 0, pixels_2 = pixels; _i < pixels_2.length; _i++) {
-    var pixel = pixels_2[_i];
-    if (!positionCharactersMap[pixel]) positionCharactersMap[pixel] = [id];else positionCharactersMap[pixel].push(id);
-  }
 }
 function addShooter(state, x, y, type) {
   if (type === void 0) {
@@ -672,6 +724,7 @@ function initGameState() {
   return {
     characterAttrsMap: {},
     characterCtrlMap: {},
+    characterTarget: {},
     characterTypes: {},
     positionCharactersMap: {},
     buildingBlocks: buildingBlocks
@@ -687,7 +740,7 @@ function matchInit$1(ctx, logger, nk, params) {
       presences: presences,
       game: game
     },
-    tickRate: 5,
+    tickRate: TICK_RATE,
     label: 'PixelShooter'
   };
 }
@@ -733,6 +786,10 @@ function matchLoop$1(ctx, logger, nk, dispatcher, tick, state, messages) {
       var ctrl = decodeControls(m.data)[0];
       logger.info('Received control %v', ctrl);
       ctrls.push(ctrl);
+    } else if (m.opCode === 2) {
+      var decoded = decodeAttrsArray(m.data)[0];
+      logger.info('Set move target %v', decoded);
+      state.game.characterTarget[decoded.id] = [decoded.x, decoded.y];
     }
   });
   cleanupDeadChars(state.game);
@@ -2318,7 +2375,7 @@ function encodeMatchUpdate(updates) {
   return builder.asUint8Array();
 }
 
-var TextEncoder = function () {
+var TextEncoder$1 = function () {
   function TextEncoder() {}
   TextEncoder.prototype.encode = function (input) {
     var utf8 = unescape(encodeURIComponent(input));
@@ -2330,7 +2387,7 @@ var TextEncoder = function () {
   };
   return TextEncoder;
 }();
-var TextDecoder = function () {
+var TextDecoder$1 = function () {
   function TextDecoder() {}
   TextDecoder.prototype.decode = function (input) {
     var bytes = new Uint8Array(input);
@@ -2463,8 +2520,8 @@ function matchSignal(ctx, logger, nk, dispatcher, tick, state, data) {
     data: "Lobby match signal received: " + data
   };
 }
-!TextEncoder && TextEncoder.bind(null);
-!TextDecoder && TextDecoder.bind(null);
+!TextEncoder$1 && TextEncoder$1.bind(null);
+!TextDecoder$1 && TextDecoder$1.bind(null);
 var pixelAdventureMatchHandlers = {
   matchInit: matchInit,
   matchJoinAttempt: matchJoinAttempt,

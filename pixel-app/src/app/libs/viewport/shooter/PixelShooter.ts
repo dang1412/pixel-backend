@@ -2,7 +2,7 @@ import { Assets } from 'pixi.js'
 import { sound } from '@pixi/sound'
 
 import {
-  CharType, CharacterAttrs, CharacterControl, ShootingGameState, addToPixels,
+  CharType, CharacterAttrs, CharacterControl, GAME_LOOP_TIME, ShootingGameState, addToPixels,
   defaultCharacterAttrs, initGameState, proceedMoveByCtrl, removeShooter,
   setMove, shootFirstHitObject, shooterOnPixels
 } from 'adventure_engine/dist/shooting'
@@ -120,7 +120,7 @@ export class PixelShooter {
     this.map.engine.on('click', (px: number, py: number) => {
       console.log('Map click', px, py)
       if (this.selectingShooterId) {
-        // this.requestTargetMove({id: this.selectingShooterId, hp: 0, x: px * 100 + 50, y: py * 100 + 50})
+        this.requestTargetMove({id: this.selectingShooterId, hp: 0, x: px * 100 + 50, y: py * 100 + 50})
       }
     })
 
@@ -196,20 +196,20 @@ export class PixelShooter {
         // request control to server
         this.requestCtrl(shooter.ctrl)
         // predict own move
-        proceedMoveByCtrl(this.state, shooter.id, shooter.ctrl, 25)
+        proceedMoveByCtrl(this.state, shooter.id, shooter.ctrl)
       }
 
       if (!moved) {
         // counting
         count ++
-        if (count > 4) {
-          // update with latest server values if stand for more than 3 counts
+        if (count > 2) {
+          // update with latest server values if stand for more than 2 counts
           this.domove(shooter)
         }
       } else {
         count = 0
       }
-    }, 100)
+    }, GAME_LOOP_TIME * 1000)
 
     this.map.scene.setTileBg('tilebg', 2)
 

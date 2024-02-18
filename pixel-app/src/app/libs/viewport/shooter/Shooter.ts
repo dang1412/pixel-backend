@@ -3,7 +3,7 @@ import { sound } from '@pixi/sound'
 
 import { AnimatedSprite } from './AnimatedSprite'
 import { characterStates, getZombieStates } from './constants'
-import { CharacterAttrs, CharacterControl } from 'adventure_engine/dist/shooting'
+import { CharacterAttrs, CharacterControl, SHOOTER_SPEED, calculateMoveToTarget } from 'adventure_engine/dist/shooting'
 import { PixelShooter } from '.'
 
 const weapons = ['', 'knife', 'gun', 'riffle', 'bat', 'flame']
@@ -36,7 +36,7 @@ export class Shooter {
 
   private hpDraw = new Graphics()
 
-  private tick = () => {}
+  private tick = (delta: number) => {}
 
   private hurtCount = 0
 
@@ -79,7 +79,7 @@ export class Shooter {
 
     char.start()
 
-    this.tick = () => this.updateByCtrl()
+    this.tick = (dt) => this.updateByCtrl(dt)
     engine.addTick(this.tick)
 
     container.interactive = true
@@ -152,9 +152,9 @@ export class Shooter {
     return ''
   }
 
-  private updateByCtrl() {
+  private updateByCtrl(dt: number) {
     const moving = this.curX !== this.attrs.x || this.curY !== this.attrs.y || this.ctrl.left || this.ctrl.right || this.ctrl.up || this.ctrl.down
-    this.updatePos()
+    this.updatePos(dt)
 
     if (this.ctrl.fire) {
       if (!this.char.switchingOnce) {
@@ -204,11 +204,18 @@ export class Shooter {
   }
 
   // move toward target
-  private updatePos() {
+  private updatePos(dt: number) {
     if (this.curX === this.attrs.x && this.curY === this.attrs.y) return
 
-    this.curX = moveVal(this.curX, this.attrs.x, this.speed)
-    this.curY = moveVal(this.curY, this.attrs.y, this.speed)
+    const d = SHOOTER_SPEED * dt / 10
+    console.log('delta time', dt, d)
+
+    // this.curX = moveVal(this.curX, this.attrs.x, d)
+    // this.curY = moveVal(this.curY, this.attrs.y, d)
+
+    const [nextX, nextY] = calculateMoveToTarget(this.curX, this.curY, this.attrs.x, this.attrs.y, d)
+    this.curX = nextX
+    this.curY = nextY
     // console.log('updatePos', this.curX, this.curY)
 
     this.game.map.scene.setImagePosition(this.container, this.curX / 100, this.curY / 100)
