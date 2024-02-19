@@ -36,29 +36,58 @@ export class PixelAdventure {
       }
     })
 
-    engine.on('dropbeast', (id: number, px: number, py: number) => {
-      // add beast to the map
-      const pixel = this.map.scene.getPixelIndex(px, py)
-      this.outputCtrl(2, id, pixel)
-    })
+    const ondrop = (data: DataTransfer | null, px: number, py: number, x: number, y: number) => {
+      if (!data) return
 
-    engine.on('dropitem', (id: number, px: number, py: number) => {
-      const pixel = this.map.scene.getPixelIndex(px, py)
-      this.outputCtrl(99, id, pixel)
-    })
+      const type = data.getData('type')
+      const id = Number(data.getData('id'))
+      console.log(id, type)
 
-    engine.on('dropbuilding', (id: number, px: number, py: number) => {
-      if (this.map.parentMap) {
-        // only drop building on submap
-        this.map.addImage({
-          area: {x: px, y: py, w: 5, h: 5},
-          imageUrl: buildingImages[id],
-          link: '',
-          title: 'Items Shop',
-          subtitle: 'Craft or trade your item here'
-        })
+      const pixel = this.map.scene.getPixelIndex(px, py)
+
+      if (type === 'beast') {
+        this.outputCtrl(2, id, pixel)
+      } else if (type === 'item') {
+        this.outputCtrl(99, id, pixel)
+      } else if (type === 'building') {
+        if (this.map.parentMap) {
+          // only drop building on submap
+          this.map.addImage({
+            area: {x: px, y: py, w: 5, h: 5},
+            imageUrl: buildingImages[id],
+            link: '',
+            title: 'Items Shop',
+            subtitle: 'Craft or trade your item here'
+          })
+        }
       }
-    })
+    }
+
+    engine.on('drop', ondrop)
+
+    // engine.on('dropbeast', (id: number, px: number, py: number) => {
+    //   // add beast to the map
+    //   const pixel = this.map.scene.getPixelIndex(px, py)
+    //   this.outputCtrl(2, id, pixel)
+    // })
+
+    // engine.on('dropitem', (id: number, px: number, py: number) => {
+    //   const pixel = this.map.scene.getPixelIndex(px, py)
+    //   this.outputCtrl(99, id, pixel)
+    // })
+
+    // engine.on('dropbuilding', (id: number, px: number, py: number) => {
+    //   if (this.map.parentMap) {
+    //     // only drop building on submap
+    //     this.map.addImage({
+    //       area: {x: px, y: py, w: 5, h: 5},
+    //       imageUrl: buildingImages[id],
+    //       link: '',
+    //       title: 'Items Shop',
+    //       subtitle: 'Craft or trade your item here'
+    //     })
+    //   }
+    // })
 
     this.load()
   }

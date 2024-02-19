@@ -2375,7 +2375,7 @@ function encodeMatchUpdate(updates) {
   return builder.asUint8Array();
 }
 
-var TextEncoder$1 = function () {
+var TextEncoder = function () {
   function TextEncoder() {}
   TextEncoder.prototype.encode = function (input) {
     var utf8 = unescape(encodeURIComponent(input));
@@ -2387,7 +2387,7 @@ var TextEncoder$1 = function () {
   };
   return TextEncoder;
 }();
-var TextDecoder$1 = function () {
+var TextDecoder = function () {
   function TextDecoder() {}
   TextDecoder.prototype.decode = function (input) {
     var bytes = new Uint8Array(input);
@@ -2520,8 +2520,8 @@ function matchSignal(ctx, logger, nk, dispatcher, tick, state, data) {
     data: "Lobby match signal received: " + data
   };
 }
-!TextEncoder$1 && TextEncoder$1.bind(null);
-!TextDecoder$1 && TextDecoder$1.bind(null);
+!TextEncoder && TextEncoder.bind(null);
+!TextDecoder && TextDecoder.bind(null);
 var pixelAdventureMatchHandlers = {
   matchInit: matchInit,
   matchJoinAttempt: matchJoinAttempt,

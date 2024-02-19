@@ -58,11 +58,11 @@ export class PixelService {
       CONTRACT_ADDRESS
     )
 
-    // const ssl = false
-    // const client = new Client('defaultkey', '192.168.1.96', '7350', ssl)
+    const ssl = false
+    const client = new Client('defaultkey', '192.168.1.96', '7350', ssl)
     
-    const ssl = true
-    const client = new Client('defaultkey', 'api.millionpixelland.com', '443', ssl)
+    // const ssl = true
+    // const client = new Client('defaultkey', 'api.millionpixelland.com', '443', ssl)
 
     this.lotteryService = new LotteryService(api)
     this.adventureService = new AdventureService(api, client, ssl)
